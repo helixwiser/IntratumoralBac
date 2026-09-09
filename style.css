@@ -13,3 +13,5 @@
 .access-count,.citation-count{display:block;font-size:11px;line-height:1.4;color:#666}.access-count{color:#8a3030;margin-bottom:6px}.access-count b,.citation-count b{display:block;font-size:15px;line-height:1.1;color:#222}.access-count:hover b{text-decoration:underline}.access-count span,.citation-count span{display:block}
 
 .altmetric-embed{display:block;margin-top:7px;min-height:22px}
+
+.organ-counts{margin-top:22px;border-top:1px solid var(--line)}.organ-count{display:grid;grid-template-columns:1fr auto auto;gap:7px;align-items:baseline;padding:13px 0;border-bottom:1px solid var(--line);font-size:14px}.organ-count b{font:28px/1 var(--serif);font-weight:normal}.organ-count small{font-size:11px;color:var(--muted)}.organ-total{margin-top:18px}

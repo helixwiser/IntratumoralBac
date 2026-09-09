@@ -57,3 +57,9 @@ function addAltmetricBadges(){
  setTimeout(()=>window._altmetric_embed_init&&window._altmetric_embed_init(),0);
 }
 document.querySelector('.chart-panel p.small').textContent='Landmark and Established: publication year. Emerging: publication month from January 2025. Y: citations. Circle area: 2025 Journal Impact Factor. Altmetric Attention Scores are supplied live by Altmetric.com.';
+
+function renderOrganCounts(){
+ const organs=['Breast','Liver','Lung'],counts=organs.map(name=>({name,count:all.filter(p=>p.organ===name).length}));
+ $('.reading-note').innerHTML='<span class="eyebrow">ORGAN COLLECTIONS</span><h3>Intratumoral<br>bacteria research.</h3><p class="small">Papers currently included in each organ collection.</p><div class="organ-counts">'+counts.map(item=>'<div class="organ-count"><span>'+item.name+'</span><b>'+item.count+'</b><small>papers</small></div>').join('')+'</div><p class="small organ-total">'+all.length+' papers across three organs</p>';
+}
+renderOrganCounts();
