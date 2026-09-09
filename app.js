@@ -42,3 +42,5 @@ function chartMonthly(id,data){
  if(!data.length)html+='<text x="395" y="88" text-anchor="middle">No dated records since January 2025</text>';
  data.sort((a,b)=>(b.jif??0)-(a.jif??0)).forEach((p,i)=>{const date=Date.parse(p.publishedOn+'T00:00:00Z');let x=75+(date-start)/range*635+(i%5-2)*3,y=145-p.citations/100*120;const available=Number.isFinite(p.jif),label=p.author+' · '+p.publishedOn+' · '+p.citations+' citations · 2025 JIF: '+jifLabel(p);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(p)+'; '+label)+'" data-id="'+p.id+'" cx="'+x+'" cy="'+y+'" r="'+pointRadius(p)+'" fill="'+(available?colors[p.organ]:'none')+'" fill-opacity=".60" stroke="#808080" stroke-width="1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>'});$('#'+id).innerHTML=html;
 }
+document.querySelector('#chart-low').previousElementSibling.querySelector('span').textContent='<100 citations · monthly from 2025';
+document.querySelector('#chart-low').setAttribute('aria-label','Emerging papers since 2025, plotted by publication month and citation count');
