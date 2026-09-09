@@ -24,6 +24,7 @@ canonical_metric_path=project/'02-更新指标/journal_impact_factors_2025.json'
 if canonical_metric_path.exists():
     shutil.copy2(canonical_metric_path,metric_path)
 metrics=json.loads(metric_path.read_text(encoding='utf-8'))
+publication_dates=json.loads((project/'02-更新指标'/'publication_dates_crossref.json').read_text(encoding='utf-8'))['dates']
 journals={r['journal'].casefold():r for r in metrics['journals']}
 for p in papers:
     metric=journals.get(p['journal'].casefold())
@@ -32,6 +33,7 @@ for p in papers:
     p['jif']=metric['jif_2025']
     p['jifSource']=metric['source_url']
     p['jifStatus']=metric['status']
+    p['publishedOn']=publication_dates.get(p['id'])
 (root/'journal-metrics.js').write_text('window.JOURNAL_METRICS='+json.dumps(metrics,ensure_ascii=False)+';',encoding='utf-8')
 (root/'data.js').write_text('window.PAPERS='+json.dumps(papers,ensure_ascii=False)+';',encoding='utf-8')
 (root/'assets').mkdir(exist_ok=True)

@@ -26,3 +26,19 @@ function renderJournalMetrics(){
 
 document.addEventListener('click',e=>{const o=e.target.closest('[data-organ]');if(o){organ=o.dataset.organ;limit=8;render()}const p=e.target.closest('[data-id]');if(p)detail(p.dataset.id)});$('.chart-plots').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.dataset.id){e.preventDefault();detail(e.target.dataset.id)}});$('.close').onclick=()=>$('#paper-dialog').close();$('#paper-dialog').addEventListener('click',e=>{if(e.target===$('#paper-dialog'))$('#paper-dialog').close()});$('#more').onclick=()=>{limit+=12;render()};render();
 renderJournalMetrics();
+
+function chart(id,data,floor,ceiling){
+ if(id==='chart-low')return chartMonthly(id,data.filter(p=>p.publishedOn>='2025-01-01'));
+ const min=Math.min(2014,...all.map(p=>p.year)),max=2026,range=ceiling-floor;let html='';
+ for(let i=0;i<=4;i++){let y=145-i*30,value=floor+range*i/4;html+='<line x1="55" y1="'+y+'" x2="735" y2="'+y+'" stroke="#e7e7e7"/><text x="44" y="'+(y+4)+'" text-anchor="end">'+Math.round(value)+'</text>'}
+ for(let year=min;year<=max;year+=2){const x=75+(year-min)/(max-min)*635;html+='<text x="'+x+'" y="174" text-anchor="middle">'+year+'</text>'}
+ if(!data.length)html+='<text x="395" y="88" text-anchor="middle">No records in this citation band</text>';
+ data.sort((a,b)=>(b.jif??0)-(a.jif??0)).forEach((p,i)=>{let x=75+(p.year-min)/(max-min)*635+(i%5-2)*3,y=145-(p.citations-floor)/range*120;const available=Number.isFinite(p.jif),label=p.author+' '+p.year+' · '+p.citations+' citations · 2025 JIF: '+jifLabel(p);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(p)+'; '+label)+'" data-id="'+p.id+'" cx="'+x+'" cy="'+y+'" r="'+pointRadius(p)+'" fill="'+(available?colors[p.organ]:'none')+'" fill-opacity=".60" stroke="#808080" stroke-width="1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>'});$('#'+id).innerHTML=html;
+}
+function chartMonthly(id,data){
+ const start=Date.UTC(2025,0,1),end=Date.UTC(2026,8,30),range=end-start,months=['Jan','Apr','Jul','Oct'];let html='';
+ for(let i=0;i<=4;i++){let y=145-i*30,value=i*25;html+='<line x1="55" y1="'+y+'" x2="735" y2="'+y+'" stroke="#e7e7e7"/><text x="44" y="'+(y+4)+'" text-anchor="end">'+value+'</text>'}
+ for(let year=2025;year<=2026;year++)for(let month=0;month<12;month+=3){const date=Date.UTC(year,month,1);if(date<start||date>end)continue;const x=75+(date-start)/range*635;html+='<text x="'+x+'" y="174" text-anchor="middle">'+months[month]+' '+String(year).slice(2)+'</text>'}
+ if(!data.length)html+='<text x="395" y="88" text-anchor="middle">No dated records since January 2025</text>';
+ data.sort((a,b)=>(b.jif??0)-(a.jif??0)).forEach((p,i)=>{const date=Date.parse(p.publishedOn+'T00:00:00Z');let x=75+(date-start)/range*635+(i%5-2)*3,y=145-p.citations/100*120;const available=Number.isFinite(p.jif),label=p.author+' · '+p.publishedOn+' · '+p.citations+' citations · 2025 JIF: '+jifLabel(p);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(p)+'; '+label)+'" data-id="'+p.id+'" cx="'+x+'" cy="'+y+'" r="'+pointRadius(p)+'" fill="'+(available?colors[p.organ]:'none')+'" fill-opacity=".60" stroke="#808080" stroke-width="1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>'});$('#'+id).innerHTML=html;
+}
