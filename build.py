@@ -34,7 +34,7 @@ for p in papers:
 (root/'journal-metrics.js').write_text('window.JOURNAL_METRICS='+json.dumps(metrics,ensure_ascii=False)+';',encoding='utf-8')
 (root/'data.js').write_text('window.PAPERS='+json.dumps(papers,ensure_ascii=False)+';',encoding='utf-8')
 (root/'assets').mkdir(exist_ok=True)
-shutil.copy2(root.parent/'素材库'/'人体器官导航_01_乳腺单引线_v2.png',root/'assets'/'organ-map.png')
+shutil.copy2(root.parent/'素材库'/'人体器官导航_无标注_v1.png',root/'assets'/'organ-map.png')
 out=root/'dist'
 out.mkdir(exist_ok=True)
 for name in ['index.html','style.css','app.js','data.js','journal-metrics.js','journal_impact_factors_2025.json']:
