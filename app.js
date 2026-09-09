@@ -51,3 +51,9 @@ function addAltmetricBadges(){
 }
 new MutationObserver(addAltmetricBadges).observe($('#papers'),{childList:true});
 addAltmetricBadges();
+
+function addAltmetricBadges(){
+ document.querySelectorAll('#papers tr').forEach(row=>{if(row.querySelector('.altmetric-embed'))return;const id=row.querySelector('[data-id]')?.dataset.id,p=all.find(item=>item.id===id);if(!p?.doi)return;const badge=document.createElement('div');badge.className='altmetric-embed';badge.dataset.doi=p.doi;badge.dataset.badgeType='donut';badge.dataset.hideNoMentions='true';badge.setAttribute('aria-label','Altmetric Attention Score');row.cells[3].append(badge)});
+ setTimeout(()=>window._altmetric_embed_init&&window._altmetric_embed_init(),0);
+}
+document.querySelector('.chart-panel p.small').textContent='Landmark and Established: publication year. Emerging: publication month from January 2025. Y: citations. Circle area: 2025 Journal Impact Factor. Altmetric Attention Scores are supplied live by Altmetric.com.';
