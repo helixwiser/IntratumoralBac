@@ -18,3 +18,7 @@
 
 .taxa-groups{margin-top:20px}.taxa-group{border-top:1px solid var(--line);padding:12px 0}.taxa-group h4{display:flex;justify-content:space-between;margin:0 0 8px;font-size:13px}.taxa-group h4 span{font-size:10px;color:var(--muted);font-weight:normal}.taxa-group ul{list-style:none;margin:0;padding:0}.taxa-group li{display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:baseline;padding:5px 0;font-size:11px}.taxa-group li i{line-height:1.35}.taxa-group li b{font:16px/1 var(--serif);font-weight:normal}.taxa-group li small{font-size:10px;color:var(--muted)}
 .organ-dot.stomach{left:58.5%;top:51.7%;background:#7566a5}.organ-dot.stomach:hover,.organ-dot.stomach:focus-visible{background:#5a4a8b}
+
+/* Dense organ collections stay usable without turning the header into a filter panel. */
+nav .nav-left{min-width:0;max-width:calc(100% - 150px);overflow-x:auto;scrollbar-width:thin;white-space:nowrap}.legend{flex-wrap:wrap;row-gap:8px}.organ-dot{margin:-6px 0 0 -6px}circle.dot{transition:transform .15s,fill-opacity .15s;transform-box:fill-box;transform-origin:center}circle.dot:hover,circle.dot:focus-visible{transform:scale(1.35)}
+.status-badge{display:inline-block;margin:0 .45rem .35rem 0;padding:.16rem .38rem;border:1px solid #777;color:#555;font:700 .66rem/1.1 Arial,sans-serif;letter-spacing:.08em}.status-badge.retracted{border-color:#9e2f2a;background:#f6e7e5;color:#8b211d}.retraction-note{padding:.75rem;border-left:4px solid #a62f29;background:#f8ecea;color:#5f1d19}
