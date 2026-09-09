@@ -16,7 +16,8 @@ for organ in ['乳腺','肝脏','肺']:
             match=re.search(r'## '+name+r'\s*\n(.*?)(?=\n## |\Z)',text,re.S)
             return re.sub(r'\[([^\]]+)\]\([^)]+\)',r'\1',match.group(1)).strip().replace('**','') if match else ''
         citation=field('citation_count')
-        papers.append(dict(id=field('paper_id'),title=field('title'),author=field('first_author'),year=int(field('year')),journal=field('journal'),doi=field('doi') if field('doi')!='null' else '',organ=organ,short=short,citations=int(citation) if citation.isdigit() else None,summary=section('相关性'),review=section('当前审阅')))
+        accesses=field('article_accesses')
+        papers.append(dict(id=field('paper_id'),title=field('title'),author=field('first_author'),year=int(field('year')),journal=field('journal'),doi=field('doi') if field('doi')!='null' else '',organ=organ,short=short,citations=int(citation) if citation.isdigit() else None,articleAccesses=int(accesses) if accesses.isdigit() else None,articleAccessesSource=field('article_accesses_source'),articleAccessesCheckedOn=field('article_accesses_checked_on'),summary=section('相关性'),review=section('当前审阅')))
 assert len({p['id'] for p in papers})==len(papers)
 metric_path=root/'journal_impact_factors_2025.json'
 canonical_metric_path=project/'02-更新指标/journal_impact_factors_2025.json'
