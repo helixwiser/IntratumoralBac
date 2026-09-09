@@ -63,3 +63,9 @@ function renderOrganCounts(){
  $('.reading-note').innerHTML='<span class="eyebrow">ORGAN COLLECTIONS</span><h3>Intratumoral<br>bacteria research.</h3><p class="small">Papers currently included in each organ collection.</p><div class="organ-counts">'+counts.map(item=>'<div class="organ-count"><span>'+item.name+'</span><b>'+item.count+'</b><small>papers</small></div>').join('')+'</div><p class="small organ-total">'+all.length+' papers across three organs</p>';
 }
 renderOrganCounts();
+
+function renderOrganCounts(){
+ const organs=['Breast','Liver','Lung'];
+ const groups=organs.map(organ=>{const counts={};all.filter(p=>p.organ===organ).forEach(p=>(p.taxa||[]).forEach(taxon=>counts[taxon]=(counts[taxon]||0)+1));const taxa=Object.entries(counts).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));return '<section class="taxa-group"><h4>'+organ+' <span>'+taxa.length+' named taxa</span></h4>'+(!taxa.length?'<p class="small">No taxon-level annotation yet.</p>':'<ul>'+taxa.map(([taxon,count])=>'<li><i>'+esc(taxon.replaceAll('_',' '))+'</i><b>'+count+'</b><small>papers</small></li>').join('')+'</ul>')+'</section>'}).join('');
+ $('.reading-note').innerHTML='<span class="eyebrow">BACTERIA STUDIED</span><h3>Named taxa,<br>by organ.</h3><p class="small">Counts reflect papers that explicitly name a bacterial taxon in the current card.</p><div class="taxa-groups">'+groups+'</div>';
+}
