@@ -36,11 +36,18 @@ function chart(id,data,floor,ceiling){
  data.sort((a,b)=>(b.jif??0)-(a.jif??0)).forEach((p,i)=>{let x=75+(p.year-min)/(max-min)*635+(i%5-2)*3,y=145-(p.citations-floor)/range*120;const available=Number.isFinite(p.jif),label=p.author+' '+p.year+' · '+p.citations+' citations · 2025 JIF: '+jifLabel(p);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(p)+'; '+label)+'" data-id="'+p.id+'" cx="'+x+'" cy="'+y+'" r="'+pointRadius(p)+'" fill="'+(available?colors[p.organ]:'none')+'" fill-opacity=".60" stroke="#808080" stroke-width="1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>'});$('#'+id).innerHTML=html;
 }
 function chartMonthly(id,data){
- const start=Date.UTC(2025,0,1),end=Date.UTC(2026,8,30),range=end-start,months=['Jan','Apr','Jul','Oct'];let html='';
+ const start=Date.UTC(2025,0,1),end=Date.UTC(2026,8,30),range=end-start,monthLabels={0:'Jan',3:'Apr',6:'Jul',9:'Oct'};let html='';
  for(let i=0;i<=4;i++){let y=145-i*30,value=i*25;html+='<line x1="55" y1="'+y+'" x2="735" y2="'+y+'" stroke="#e7e7e7"/><text x="44" y="'+(y+4)+'" text-anchor="end">'+value+'</text>'}
- for(let year=2025;year<=2026;year++)for(let month=0;month<12;month+=3){const date=Date.UTC(year,month,1);if(date<start||date>end)continue;const x=75+(date-start)/range*635;html+='<text x="'+x+'" y="174" text-anchor="middle">'+months[month]+' '+String(year).slice(2)+'</text>'}
+ for(let year=2025;year<=2026;year++)for(let month=0;month<12;month+=3){const date=Date.UTC(year,month,1);if(date<start||date>end)continue;const x=75+(date-start)/range*635;html+='<text x="'+x+'" y="174" text-anchor="middle">'+monthLabels[month]+' '+String(year).slice(2)+'</text>'}
  if(!data.length)html+='<text x="395" y="88" text-anchor="middle">No dated records since January 2025</text>';
  data.sort((a,b)=>(b.jif??0)-(a.jif??0)).forEach((p,i)=>{const date=Date.parse(p.publishedOn+'T00:00:00Z');let x=75+(date-start)/range*635+(i%5-2)*3,y=145-p.citations/100*120;const available=Number.isFinite(p.jif),label=p.author+' · '+p.publishedOn+' · '+p.citations+' citations · 2025 JIF: '+jifLabel(p);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(p)+'; '+label)+'" data-id="'+p.id+'" cx="'+x+'" cy="'+y+'" r="'+pointRadius(p)+'" fill="'+(available?colors[p.organ]:'none')+'" fill-opacity=".60" stroke="#808080" stroke-width="1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>'});$('#'+id).innerHTML=html;
 }
 document.querySelector('#chart-low').previousElementSibling.querySelector('span').textContent='<100 citations · monthly from 2025';
 document.querySelector('#chart-low').setAttribute('aria-label','Emerging papers since 2025, plotted by publication month and citation count');
+
+function addAltmetricBadges(){
+ document.querySelectorAll('#papers tr').forEach(row=>{if(row.querySelector('.altmetric-embed'))return;const id=row.querySelector('[data-id]')?.dataset.id,p=all.find(item=>item.id===id);if(!p?.doi)return;const badge=document.createElement('span');badge.className='altmetric-embed';badge.dataset.doi=p.doi;badge.dataset.badgeType='donut';badge.dataset.hideNoMentions='true';badge.setAttribute('aria-label','Altmetric Attention Score');row.cells[3].append(badge)});
+ setTimeout(()=>window._altmetric_embed_init&&window._altmetric_embed_init(),0);
+}
+new MutationObserver(addAltmetricBadges).observe($('#papers'),{childList:true});
+addAltmetricBadges();

@@ -11,3 +11,5 @@
 .chart-plots{display:grid;gap:20px;margin:20px 0 12px}.citation-band{border-top:1px solid var(--line);padding-top:9px}.citation-band h3{display:flex;justify-content:space-between;margin:0;font-size:12px;letter-spacing:.6px;text-transform:uppercase}.citation-band h3 span{font-weight:normal;color:var(--muted);letter-spacing:0;text-transform:none}.chart-panel .citation-band svg{margin:6px 0 0}@media(max-width:600px){.chart-plots{gap:16px}.citation-band h3{font-size:11px}}
 
 .access-count,.citation-count{display:block;font-size:11px;line-height:1.4;color:#666}.access-count{color:#8a3030;margin-bottom:6px}.access-count b,.citation-count b{display:block;font-size:15px;line-height:1.1;color:#222}.access-count:hover b{text-decoration:underline}.access-count span,.citation-count span{display:block}
+
+.altmetric-embed{display:block;margin-top:7px;min-height:22px}
