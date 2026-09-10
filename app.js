@@ -20,9 +20,10 @@ const short=paper=>paper.short||paper.title;
 const citations=paper=>Number.isFinite(paper.citations)?paper.citations.toLocaleString('en-US'):'—';
 const jifLabel=paper=>Number.isFinite(paper.jif)?paper.jif.toFixed(1):'Unavailable';
 const altmetricLabel=paper=>paper.altmetricStatus==='access_required'?'Live badge available; an archived numeric value requires API access':paper.altmetricStatus==='no_doi'?'Unavailable (no DOI)':paper.altmetricStatus||'Unavailable';
-const focusCopy=paper=>paper.contentStatus==='full_text_reviewed'?(paper.whyRead||paper.summary):paper.summary;
+const hasVerifiedFullTextReview=paper=>paper.reviewStatus==='verified_full_text'||paper.contentStatus==='verified_full_text';
+const focusCopy=paper=>hasVerifiedFullTextReview(paper)?(paper.whyRead||paper.summary):paper.summary;
 const pointRadius=paper=>Number.isFinite(paper.jif)?2*Math.sqrt(paper.jif):4;
-const button=paper=>'<button class="paper-open" data-id="'+paper.id+'">'+esc(short(paper))+'</button>';
+const button=(paper,context='collection')=>'<button class="paper-open" data-id="'+paper.id+'" data-context="'+context+'">'+esc(short(paper))+'</button>';
 const attention=paper=>'<span class="citation-count"><b>'+citations(paper)+'</b><span>Citations</span></span>';
 const statusBadge=paper=>paper.publicationStatus==='retracted'?'<span class="status-badge retracted">RETRACTED</span>':paper.publicationVersion==='preprint'?'<span class="status-badge">PREPRINT</span>':'';
 const taxonLabel=taxon=>String(taxon||'').replaceAll('_',' ').replace(/\s+/g,' ').trim();
@@ -43,11 +44,12 @@ const preciseMonthlyDate=paper=>{
   return Date.UTC(Number(match[1]),Number(match[2])-1,Number(match[3]||1));
 };
 
-function detail(id){
+function detail(id,context='collection'){
   const paper=all.find(item=>item.id===id);
   const summary=paper.summary||'A basic metadata record is available; detailed interpretation has not yet been completed.';
   const citationDate=paper.citationCheckedOn||'2026-09-09';
-  $('#detail').innerHTML='<span class="eyebrow">'+esc(paper.organ)+' / '+paper.year+' / '+esc(paper.id)+'</span>'+statusBadge(paper)+'<h2>'+esc(paper.title)+'</h2><p class="meta">'+esc(paper.author)+' · '+esc(paper.journal)+' · '+esc(paper.scopeClass||'scope unavailable')+' · '+esc(paper.publicationVersion||'version unavailable')+'</p><p>'+esc(summary)+'</p>'+(paper.publicationStatus==='retracted'?'<p class="retraction-note"><b>Retraction notice:</b> This record is retained for historical and methodological context. Its original conclusions must not be treated as valid evidence.'+(paper.retractionDoi?' <a href="https://doi.org/'+encodeURIComponent(paper.retractionDoi)+'" target="_blank" rel="noopener">Notice ↗</a>':'')+'</p>':'')+'<p class="small">Citations: '+citations(paper)+' · OpenAlex, checked '+esc(citationDate)+'</p>'+(paper.doi?'<div class="detail-altmetric"><span class="small">Altmetric Attention Score</span><div class="altmetric-embed" data-doi="'+esc(paper.doi)+'" data-badge-type="medium-donut" data-hide-no-mentions="true"></div></div>':'<p class="small">Altmetric Attention Score: '+esc(altmetricLabel(paper))+'</p>')+'<p class="small">2025 Journal Impact Factor: '+jifLabel(paper)+' · '+(paper.jifSource?'<a href="'+esc(paper.jifSource)+'" target="_blank" rel="noopener">Source ↗</a>':'Source unavailable')+'</p><hr><p><b>Technical rigor</b>　'+esc(paper.technicalRigor||'Assessment unavailable')+'</p><p><b>Technical innovation</b>　'+esc(paper.technicalInnovation||'Assessment unavailable')+'</p><p><b>Conceptual novelty</b>　'+esc(paper.conceptualNovelty||'Assessment unavailable')+'</p><p><b>Key limitation</b>　'+esc(paper.keyLimitation||'Assessment unavailable')+'</p><p class="small">'+esc(paper.review)+'</p>'+(paper.doi?'<a class="doi" target="_blank" rel="noopener" href="https://doi.org/'+encodeURIComponent(paper.doi)+'">Read the paper ↗</a>':'');
+  const assessment=context==='focus'&&hasVerifiedFullTextReview(paper)?'<section class="verified-assessment"><hr><p><b>Technical rigor</b>　'+esc(paper.technicalRigor)+'</p><p><b>Technical innovation</b>　'+esc(paper.technicalInnovation)+'</p><p><b>Conceptual novelty</b>　'+esc(paper.conceptualNovelty)+'</p><p><b>Key limitation</b>　'+esc(paper.keyLimitation)+'</p></section>':'';
+  $('#detail').innerHTML='<span class="eyebrow">'+esc(paper.organ)+' / '+paper.year+' / '+esc(paper.id)+'</span>'+statusBadge(paper)+'<h2>'+esc(paper.title)+'</h2><p class="meta">'+esc(paper.author)+' · '+esc(paper.journal)+' · '+esc(paper.scopeClass||'scope unavailable')+' · '+esc(paper.publicationVersion||'version unavailable')+'</p><p>'+esc(summary)+'</p>'+(paper.publicationStatus==='retracted'?'<p class="retraction-note"><b>Retraction notice:</b> This record is retained for historical and methodological context. Its original conclusions must not be treated as valid evidence.'+(paper.retractionDoi?' <a href="https://doi.org/'+encodeURIComponent(paper.retractionDoi)+'" target="_blank" rel="noopener">Notice ↗</a>':'')+'</p>':'')+'<p class="small">Citations: '+citations(paper)+' · OpenAlex, checked '+esc(citationDate)+'</p>'+(paper.doi?'<div class="detail-altmetric"><span class="small">Altmetric Attention Score</span><div class="altmetric-embed" data-doi="'+esc(paper.doi)+'" data-badge-type="medium-donut" data-hide-no-mentions="true"></div></div>':'<p class="small">Altmetric Attention Score: '+esc(altmetricLabel(paper))+'</p>')+'<p class="small">2025 Journal Impact Factor: '+jifLabel(paper)+' · '+(paper.jifSource?'<a href="'+esc(paper.jifSource)+'" target="_blank" rel="noopener">Source ↗</a>':'Source unavailable')+'</p>'+assessment+(paper.doi?'<a class="doi" target="_blank" rel="noopener" href="https://doi.org/'+encodeURIComponent(paper.doi)+'">Read the paper ↗</a>':'');
   $('#paper-dialog').showModal();
   setTimeout(()=>window._altmetric_embed_init&&window._altmetric_embed_init(),0);
 }
@@ -57,8 +59,8 @@ function render(){
   const cited=papers.filter(paper=>Number.isFinite(paper.citations));
   const plottedByYear=cited.filter(paper=>paper.year>=PLOT_START_YEAR);
   $('#inventory').textContent=all.length+' records · '+atlasOrganRows.length+' major organs · 2 grouped views';
-  const fullTextCount=all.filter(paper=>paper.contentStatus==='full_text_reviewed').length;
-  $('.editor-note .small').textContent=all.length+' basic records · '+fullTextCount+' full-text assessments completed.';
+  const fullTextCount=all.filter(hasVerifiedFullTextReview).length;
+  $('.editor-note .small').textContent=fullTextCount?fullTextCount+' verified full-text assessments available.':'Verified full-text assessments will appear here.';
   $('#selection-label').textContent=(organ==='All'?'All collections':organ)+' · '+papers.length+' papers';
   document.querySelectorAll('nav button').forEach(button=>{const active=button.dataset.organ===organ;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
   const eligible=papers.filter(p=>p.publicationStatus!=='retracted');
@@ -68,9 +70,9 @@ function render(){
     if(focus.length>=3)break;
     if(!focus.includes(paper))focus.push(paper);
   }
-  $('#focus').innerHTML=focus.map(paper=>'<article class="focus-item"><span class="eyebrow">'+esc(paper.organ)+' · '+esc(paper.journal)+'</span><h3>'+button(paper)+'</h3><p class="summary">'+esc(focusCopy(paper)||'Explore the study design and its central research question.')+'</p><span class="meta">'+esc(paper.author)+' / '+paper.year+'<br>Citations: '+citations(paper)+' · '+esc(paper.reviewStatus||'Status unavailable')+'</span></article>').join('');
+  $('#focus').innerHTML=focus.map(paper=>'<article class="focus-item"><span class="eyebrow">'+esc(paper.organ)+' · '+esc(paper.journal)+'</span><h3>'+button(paper,'focus')+'</h3><p class="summary">'+esc(focusCopy(paper)||'Explore the study design and its central research question.')+'</p><span class="meta">'+esc(paper.author)+' / '+paper.year+'<br>Citations: '+citations(paper)+(hasVerifiedFullTextReview(paper)?' · Full-text review available':'')+'</span></article>').join('');
   $('#recent').innerHTML=papers.slice(0,6).map(paper=>'<article class="recent-item"><div class="meta">'+paper.year+' · '+esc(paper.organ)+' / '+esc(paper.author)+'</div><h3>'+button(paper)+'</h3></article>').join('');
-  $('#papers').innerHTML=papers.slice(0,limit).map(paper=>'<tr><td>'+paper.year+'<br><span class="small">'+esc(paper.organ)+'</span></td><td>'+statusBadge(paper)+button(paper)+'</td><td>'+esc(paper.journal)+'<br><span class="small">2025 JIF: '+jifLabel(paper)+'</span></td><td>'+attention(paper)+'</td><td>'+esc(paper.reviewStatus||paper.contentStatus||'Status unavailable')+'</td></tr>').join('');
+  $('#papers').innerHTML=papers.slice(0,limit).map(paper=>'<tr><td>'+paper.year+'<br><span class="small">'+esc(paper.organ)+'</span></td><td>'+statusBadge(paper)+button(paper)+'</td><td>'+esc(paper.journal)+'<br><span class="small">2025 JIF: '+jifLabel(paper)+'</span></td><td>'+attention(paper)+'</td></tr>').join('');
   $('#more').hidden=limit>=papers.length;
   chart('chart-high',plottedByYear.filter(paper=>paper.citations>500),500,Math.max(600,Math.ceil(Math.max(...plottedByYear.filter(paper=>paper.citations>500).map(paper=>paper.citations),500)/100)*100));
   chart('chart-mid',plottedByYear.filter(paper=>paper.citations>=100&&paper.citations<=500),100,500);
@@ -95,7 +97,7 @@ function chart(id,data,floor,ceiling){
   for(let index=0;index<=4;index++){const y=145-index*30,value=floor+range*index/4;html+='<line x1="55" y1="'+y+'" x2="735" y2="'+y+'" stroke="#e7e7e7"/><text x="44" y="'+(y+4)+'" text-anchor="end">'+Math.round(value)+'</text>';}
   for(let year=min;year<=max;year+=2){const x=75+(year-min)/(max-min)*635;html+='<text x="'+x+'" y="174" text-anchor="middle">'+year+'</text>';}
   if(!data.length)html+='<text x="395" y="88" text-anchor="middle">No records in this citation band</text>';
-  data.sort((a,b)=>(b.jif??0)-(a.jif??0)).forEach(paper=>{const x=75+(paper.year-min)/Math.max(1,max-min)*635;const y=145-(paper.citations-floor)/range*120;const category=collectionForPaper(paper);const label=category+' · '+paper.author+' '+paper.year+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+(Number.isFinite(paper.jif)?colors[category]:'none')+'" fill-opacity=".60" stroke="#808080" stroke-width="1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
+  data.sort((a,b)=>(b.jif??0)-(a.jif??0)).forEach(paper=>{const x=75+(paper.year-min)/Math.max(1,max-min)*635;const y=145-(paper.citations-floor)/range*120;const category=collectionForPaper(paper);const label=category+' · '+paper.author+' '+paper.year+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" data-context="collection" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+(Number.isFinite(paper.jif)?colors[category]:'none')+'" fill-opacity=".60" stroke="#808080" stroke-width="1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
   $('#'+id).innerHTML=html;
 }
 
@@ -106,7 +108,7 @@ function chartMonthly(id,data){
   for(let index=0;index<=4;index++){const y=145-index*30,value=index*25;html+='<line x1="55" y1="'+y+'" x2="735" y2="'+y+'" stroke="#e7e7e7"/><text x="44" y="'+(y+4)+'" text-anchor="end">'+value+'</text>';}
   for(let year=2025;year<=2026;year++)for(let month=0;month<12;month+=3){const date=Date.UTC(year,month,1);if(date<start||date>end)continue;const x=75+(date-start)/range*635;html+='<text x="'+x+'" y="174" text-anchor="middle">'+monthLabels[month]+' '+String(year).slice(2)+'</text>';}
   if(!data.length)html+='<text x="395" y="88" text-anchor="middle">No dated records since January 2025</text>';
-  data.sort((a,b)=>(b.paper.jif??0)-(a.paper.jif??0)).forEach(({paper,date})=>{const x=75+(date-start)/range*635;const y=145-paper.citations/100*120;const category=collectionForPaper(paper);const label=category+' · '+paper.author+' · '+paper.publishedOn+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+(Number.isFinite(paper.jif)?colors[category]:'none')+'" fill-opacity=".60" stroke="#808080" stroke-width="1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
+  data.sort((a,b)=>(b.paper.jif??0)-(a.paper.jif??0)).forEach(({paper,date})=>{const x=75+(date-start)/range*635;const y=145-paper.citations/100*120;const category=collectionForPaper(paper);const label=category+' · '+paper.author+' · '+paper.publishedOn+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" data-context="collection" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+(Number.isFinite(paper.jif)?colors[category]:'none')+'" fill-opacity=".60" stroke="#808080" stroke-width="1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
   $('#'+id).innerHTML=html;
 }
 
@@ -159,8 +161,8 @@ function addAltmetricBadges(){
   setTimeout(()=>window._altmetric_embed_init&&window._altmetric_embed_init(),0);
 }
 
-document.addEventListener('click',event=>{const organButton=event.target.closest('[data-organ]');if(organButton){organ=organButton.dataset.organ;limit=8;render();}const paperButton=event.target.closest('[data-id]');if(paperButton)detail(paperButton.dataset.id);});
-$('.chart-plots').addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&event.target.dataset.id){event.preventDefault();detail(event.target.dataset.id);}});
+document.addEventListener('click',event=>{const organButton=event.target.closest('[data-organ]');if(organButton){organ=organButton.dataset.organ;limit=8;render();}const paperButton=event.target.closest('[data-id]');if(paperButton)detail(paperButton.dataset.id,paperButton.dataset.context||'collection');});
+$('.chart-plots').addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&event.target.dataset.id){event.preventDefault();detail(event.target.dataset.id,event.target.dataset.context||'collection');}});
 $('.close').onclick=()=>$('#paper-dialog').close();
 $('#paper-dialog').addEventListener('click',event=>{if(event.target===$('#paper-dialog'))$('#paper-dialog').close();});
 $('#more').onclick=()=>{limit+=12;render();};
