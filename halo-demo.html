@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Halo and core studies — IntratumoralBac</title>
+  <link rel="stylesheet" href="halo-demo.css">
+</head>
+<body>
+  <header><a href="scatter-demo.html" class="back">← Scatter plot studies</a><a href="./" class="brand">Intratumoral<span>Bac</span><i>.</i></a><span>HALO AND CORE LAB</span></header>
+  <main>
+    <section class="intro"><div><span class="kicker">ONE MARK · SEVEN TREATMENTS</span><h1>Halo and core,<br><em>under a microscope.</em></h1></div><p>The dark core fixes the paper’s position. Halo area follows 2025 JIF. Every panel uses the same emerging-paper dataset and axes.</p></section>
+    <section class="preset-grid" id="preset-grid"></section>
+    <section class="tuner">
+      <div class="tuner-copy"><span class="kicker">LIVE TUNER</span><h2>Set the visual weight.</h2><p>Adjust one parameter at a time, then compare the result with the presets above.</p><div class="controls">
+        <label>Core radius <output id="core-out">2.0 px</output><input id="core" type="range" min="0.8" max="4" step="0.1" value="2"></label>
+        <label>Halo opacity <output id="opacity-out">18%</output><input id="opacity" type="range" min="0.04" max="0.4" step="0.01" value="0.18"></label>
+        <label>Halo scale <output id="scale-out">1.10×</output><input id="scale" type="range" min="0.7" max="1.7" step="0.05" value="1.1"></label>
+        <label class="switch"><input id="gradient" type="checkbox" checked><span>Radial gradient</span></label>
+      </div></div>
+      <div class="live-panel"><div class="live-meta"><b id="live-label">2.0 px core · 18% gradient halo · 1.10×</b><span>LIVE</span></div><svg id="live-plot" viewBox="0 0 620 220" role="img" aria-label="Live halo and core scatter plot"></svg></div>
+    </section>
+  </main>
+  <div class="tooltip" id="tooltip" hidden></div>
+  <script src="data.js"></script><script src="halo-demo.js"></script>
+</body>
+</html>
