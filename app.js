@@ -1,4 +1,5 @@
 const SNAPSHOT_DATE='2026-09-09';
+const PLOT_START_YEAR=2010;
 const organConfig=window.ORGAN_CONFIG||[];
 const palette=['#b83b35','#277b88','#b58a36','#7566a5','#5e7d4c','#8a5b43','#3e6f8e','#927b34','#6f5688','#47785d'];
 const all=window.PAPERS.map(p=>({...p,short:p.cardTitleEn||p.title,review:p.reviewStatus||p.contentStatus||'Review status unavailable'}));
@@ -55,6 +56,7 @@ function detail(id){
 function render(){
   const papers=selected().sort((a,b)=>String(b.publishedOn||b.year).localeCompare(String(a.publishedOn||a.year))||b.id.localeCompare(a.id));
   const cited=papers.filter(paper=>Number.isFinite(paper.citations));
+  const plottedByYear=cited.filter(paper=>paper.year>=PLOT_START_YEAR);
   $('#inventory').textContent=all.length+' records · '+atlasOrganRows.length+' major organs · 2 grouped views';
   const fullTextCount=all.filter(paper=>paper.contentStatus==='full_text_reviewed').length;
   $('.editor-note .small').textContent=all.length+' basic records · '+fullTextCount+' full-text assessments completed.';
@@ -71,14 +73,16 @@ function render(){
   $('#recent').innerHTML=papers.slice(0,6).map(paper=>'<article class="recent-item"><div class="meta">'+paper.year+' · '+esc(paper.organ)+' / '+esc(paper.author)+'</div><h3>'+button(paper)+'</h3></article>').join('');
   $('#papers').innerHTML=papers.slice(0,limit).map(paper=>'<tr><td>'+paper.year+'<br><span class="small">'+esc(paper.organ)+'</span></td><td>'+statusBadge(paper)+button(paper)+'</td><td>'+esc(paper.journal)+'<br><span class="small">2025 JIF: '+jifLabel(paper)+'</span></td><td>'+attention(paper)+'</td><td>'+esc(paper.reviewStatus||paper.contentStatus||'Status unavailable')+'</td></tr>').join('');
   $('#more').hidden=limit>=papers.length;
-  chart('chart-high',cited.filter(paper=>paper.citations>500),500,Math.max(600,Math.ceil(Math.max(...cited.filter(paper=>paper.citations>500).map(paper=>paper.citations),500)/100)*100));
-  chart('chart-mid',cited.filter(paper=>paper.citations>=100&&paper.citations<=500),100,500);
+  chart('chart-high',plottedByYear.filter(paper=>paper.citations>500),500,Math.max(600,Math.ceil(Math.max(...plottedByYear.filter(paper=>paper.citations>500).map(paper=>paper.citations),500)/100)*100));
+  chart('chart-mid',plottedByYear.filter(paper=>paper.citations>=100&&paper.citations<=500),100,500);
   chart('chart-low',cited.filter(paper=>paper.citations<100),0,100);
   const lowCited=cited.filter(paper=>paper.citations<100);
   const monthly=lowCited.filter(paper=>{const date=preciseMonthlyDate(paper);return date!==null&&date>=Date.UTC(2025,0,1)&&date<=Date.parse(SNAPSHOT_DATE+'T00:00:00Z');});
   let plotCoverage=$('#plot-coverage');
   if(!plotCoverage){plotCoverage=document.createElement('p');plotCoverage.id='plot-coverage';plotCoverage.className='small';$('.chart-panel').append(plotCoverage);}
-  plotCoverage.textContent=cited.length+' papers plotted across citation bands; '+monthly.length+' recent papers appear in the monthly Emerging panel. '+(lowCited.length-monthly.length)+' earlier or year-only low-citation records remain in the collection table.';
+  const annualCount=plottedByYear.filter(paper=>paper.citations>=100).length;
+  const pre2010Count=cited.filter(paper=>paper.year<PLOT_START_YEAR).length;
+  plotCoverage.textContent=(annualCount+monthly.length)+' papers shown: '+annualCount+' established or landmark papers since 2010, and '+monthly.length+' recent papers in the monthly Emerging panel. '+pre2010Count+' cited papers published before 2010 remain in the collection table.';
   renderOrganTaxa();
 }
 
@@ -87,7 +91,7 @@ function chart(id,data,floor,ceiling){
     chartMonthly(id,data.filter(paper=>paper.publishedOn>='2025-01-01'&&paper.publishedOn<=SNAPSHOT_DATE));
     return;
   }
-  const min=Math.min(...all.map(paper=>paper.year)),max=Math.max(...all.map(paper=>paper.year)),range=Math.max(1,ceiling-floor);
+  const min=PLOT_START_YEAR,max=Math.max(...all.map(paper=>paper.year)),range=Math.max(1,ceiling-floor);
   let html='';
   for(let index=0;index<=4;index++){const y=145-index*30,value=floor+range*index/4;html+='<line x1="55" y1="'+y+'" x2="735" y2="'+y+'" stroke="#e7e7e7"/><text x="44" y="'+(y+4)+'" text-anchor="end">'+Math.round(value)+'</text>';}
   for(let year=min;year<=max;year+=2){const x=75+(year-min)/(max-min)*635;html+='<text x="'+x+'" y="174" text-anchor="middle">'+year+'</text>';}
@@ -109,7 +113,7 @@ function chartMonthly(id,data){
 
 function renderLegend(){
   $('.legend').innerHTML=collections.map(name=>'<span><i style="background:'+colors[name]+'"></i>'+name+'</span>').join('');
-  $('.chart-panel p.small').textContent='Landmark and Established: publication year. Emerging: publication month from January 2025. Y: citations. Circle area: 2025 Journal Impact Factor. Colors use the atlas collections: organs with more than 20 papers, Pan-cancer, and Others. Altmetric Attention Scores are supplied live by Altmetric.com.';
+  $('.chart-panel p.small').textContent='Landmark and Established: publication year from 2010. Emerging: publication month from January 2025. Y: citations. Circle area: 2025 Journal Impact Factor. Colors use the atlas collections: organs with more than 20 papers, Pan-cancer, and Others. Altmetric Attention Scores are supplied live by Altmetric.com.';
   $('#chart-low').previousElementSibling.querySelector('span').textContent='<100 citations · monthly from 2025';
   $('#chart-low').setAttribute('aria-label','Emerging papers since 2025, plotted by publication month and citation count');
 }
