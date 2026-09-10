@@ -75,6 +75,8 @@ for path in sorted(cards_root.rglob("*.md")):
     journal_metric = journal_by_name.get(norm_journal(journal))
     if journal_metric is None:
         raise ValueError(f"Journal missing from metric registry: {journal} ({metadata['paper_id']})")
+    if not isinstance(journal_metric.get("jif_2025"), (int, float)) or isinstance(journal_metric.get("jif_2025"), bool):
+        raise ValueError(f"Active paper has no numeric 2025 JIF: {journal} ({metadata['paper_id']})")
     paper_id = str(metadata["paper_id"])
     organ_ids = metadata.get("organ_ids") if isinstance(metadata.get("organ_ids"), list) else []
     primary_organ_id = organ_ids[0] if organ_ids else (organ_by_zh.get(folder_organ) or {}).get("id")
@@ -126,10 +128,6 @@ for path in sorted(cards_root.rglob("*.md")):
         "citationSourceId": str(oa_metric.get("source_record_id") or metadata.get("citation_source_id") or ""),
         "citationCheckedOn": str(openalex_payload.get("snapshot_date") or metadata.get("citation_checked_on") or ""),
         "citationStatus": oa_metric.get("retrieval_status") or "not_checked",
-        "articleAccesses": integer_or_none(attention.get("article_accesses", {}).get("value_numeric", metadata.get("article_accesses"))),
-        "articleAccessesSource": str(attention.get("article_accesses", {}).get("source_url") or metadata.get("article_accesses_source") or ""),
-        "articleAccessesCheckedOn": str(attention.get("article_accesses", {}).get("observed_on") or metadata.get("article_accesses_checked_on") or ""),
-        "articleAccessesStatus": attention.get("article_accesses", {}).get("retrieval_status") or "not_checked",
         "altmetricScore": attention.get("altmetric", {}).get("value_numeric"),
         "altmetricStatus": attention.get("altmetric", {}).get("retrieval_status") or "not_checked",
         "publishedOnline": str(metadata.get("published_online") or ""),
