@@ -270,4 +270,6 @@ out.mkdir(exist_ok=True)
 for name in ["index.html", "latest.html", "scatter-demo.html", "halo-demo.html", "style.css", "scatter-demo.css", "halo-demo.css", "homepage-study.css", "app.js", "scatter-demo.js", "halo-demo.js", "homepage-study.js", "reading-set.js", "latest.js", "data.js", "journal-metrics.js", "organ-config.js", "landmark-config.js", "landmark-config.json", "data-manifest.json", "journal_impact_factors_2025.json"]:
     shutil.copy2(root / name, out / name)
 shutil.copytree(root / "assets", out / "assets", dirs_exist_ok=True)
+shutil.copytree(root / "abstract-clusters", out / "abstract-clusters", dirs_exist_ok=True,
+                ignore=shutil.ignore_patterns("test-*.cjs", "README.md"))
 print(json.dumps(manifest, ensure_ascii=False))
