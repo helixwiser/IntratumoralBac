@@ -43,19 +43,38 @@ const preciseMonthlyDate=paper=>{
   if(!match)return null;
   return Date.UTC(Number(match[1]),Number(match[2])-1,Number(match[3]||1));
 };
+const publicationDateParts=paper=>String(paper.publishedOn||paper.publishedOnline||paper.year||'').match(/^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?$/);
+const publicationSortTimestamp=paper=>{
+  const match=publicationDateParts(paper),year=Number(paper.year);
+  if(!match)return Date.UTC(year||0,0,1);
+  const dateYear=Number(match[1]),month=Number(match[2]||1),day=Number(match[3]||1);
+  const timestamp=Date.UTC(dateYear,month-1,day);
+  if(dateYear!==year||timestamp>Date.parse(SNAPSHOT_DATE+'T23:59:59Z'))return Date.UTC(year,0,1);
+  return timestamp;
+};
+const publicationDateLabel=paper=>{
+  const match=publicationDateParts(paper),year=Number(paper.year);
+  if(!match)return String(year||'Date unavailable');
+  const dateYear=Number(match[1]),month=Number(match[2]||1),day=Number(match[3]||1);
+  const timestamp=Date.UTC(dateYear,month-1,day);
+  if(dateYear!==year||timestamp>Date.parse(SNAPSHOT_DATE+'T23:59:59Z'))return String(year)+' · exact date under review';
+  if(!match[2])return String(dateYear);
+  if(!match[3])return new Intl.DateTimeFormat('en',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(timestamp));
+  return new Intl.DateTimeFormat('en',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(timestamp));
+};
 
 function detail(id,context='collection'){
   const paper=all.find(item=>item.id===id);
   const summary=paper.summary||'A basic metadata record is available; detailed interpretation has not yet been completed.';
   const citationDate=paper.citationCheckedOn||'2026-09-09';
   const assessment=context==='focus'&&hasVerifiedFullTextReview(paper)?'<section class="verified-assessment"><hr><p><b>Technical rigor</b>　'+esc(paper.technicalRigor)+'</p><p><b>Technical innovation</b>　'+esc(paper.technicalInnovation)+'</p><p><b>Conceptual novelty</b>　'+esc(paper.conceptualNovelty)+'</p><p><b>Key limitation</b>　'+esc(paper.keyLimitation)+'</p></section>':'';
-  $('#detail').innerHTML='<span class="eyebrow">'+esc(paper.organ)+' / '+paper.year+' / '+esc(paper.id)+'</span>'+statusBadge(paper)+'<h2>'+esc(paper.title)+'</h2><p class="meta">'+esc(paper.author)+' · '+esc(paper.journal)+' · '+esc(paper.scopeClass||'scope unavailable')+' · '+esc(paper.publicationVersion||'version unavailable')+'</p><p>'+esc(summary)+'</p>'+(paper.publicationStatus==='retracted'?'<p class="retraction-note"><b>Retraction notice:</b> This record is retained for historical and methodological context. Its original conclusions must not be treated as valid evidence.'+(paper.retractionDoi?' <a href="https://doi.org/'+encodeURIComponent(paper.retractionDoi)+'" target="_blank" rel="noopener">Notice ↗</a>':'')+'</p>':'')+'<p class="small">Citations: '+citations(paper)+' · OpenAlex, checked '+esc(citationDate)+'</p>'+(paper.doi?'<div class="detail-altmetric"><span class="small">Altmetric Attention Score</span><div class="altmetric-embed" data-doi="'+esc(paper.doi)+'" data-badge-type="medium-donut" data-hide-no-mentions="true"></div></div>':'<p class="small">Altmetric Attention Score: '+esc(altmetricLabel(paper))+'</p>')+'<p class="small">2025 Journal Impact Factor: '+jifLabel(paper)+' · '+(paper.jifSource?'<a href="'+esc(paper.jifSource)+'" target="_blank" rel="noopener">Source ↗</a>':'Source unavailable')+'</p>'+assessment+(paper.doi?'<a class="doi" target="_blank" rel="noopener" href="https://doi.org/'+encodeURIComponent(paper.doi)+'">Read the paper ↗</a>':'');
+  $('#detail').innerHTML='<span class="eyebrow">'+esc(paper.organ)+' / '+paper.year+' / '+esc(paper.id)+'</span>'+statusBadge(paper)+'<h2>'+esc(paper.title)+'</h2><p class="meta">'+esc(paper.author)+' · '+esc(paper.journal)+' · '+esc(paper.scopeClass||'scope unavailable')+' · '+esc(paper.publicationVersion||'version unavailable')+'</p><p class="publication-date"><b>Published</b> '+esc(publicationDateLabel(paper))+'</p><p>'+esc(summary)+'</p>'+(paper.publicationStatus==='retracted'?'<p class="retraction-note"><b>Retraction notice:</b> This record is retained for historical and methodological context. Its original conclusions must not be treated as valid evidence.'+(paper.retractionDoi?' <a href="https://doi.org/'+encodeURIComponent(paper.retractionDoi)+'" target="_blank" rel="noopener">Notice ↗</a>':'')+'</p>':'')+'<p class="small">Citations: '+citations(paper)+' · OpenAlex, checked '+esc(citationDate)+'</p>'+(paper.doi?'<div class="detail-altmetric"><span class="small">Altmetric Attention Score</span><div class="altmetric-embed" data-doi="'+esc(paper.doi)+'" data-badge-type="medium-donut" data-hide-no-mentions="true"></div></div>':'<p class="small">Altmetric Attention Score: '+esc(altmetricLabel(paper))+'</p>')+'<p class="small">2025 Journal Impact Factor: '+jifLabel(paper)+' · '+(paper.jifSource?'<a href="'+esc(paper.jifSource)+'" target="_blank" rel="noopener">Source ↗</a>':'Source unavailable')+'</p>'+assessment+(paper.doi?'<a class="doi" target="_blank" rel="noopener" href="https://doi.org/'+encodeURIComponent(paper.doi)+'">Read the paper ↗</a>':'');
   $('#paper-dialog').showModal();
   setTimeout(()=>window._altmetric_embed_init&&window._altmetric_embed_init(),0);
 }
 
 function render(){
-  const papers=selected().sort((a,b)=>String(b.publishedOn||b.year).localeCompare(String(a.publishedOn||a.year))||b.id.localeCompare(a.id));
+  const papers=selected().sort((a,b)=>publicationSortTimestamp(b)-publicationSortTimestamp(a)||b.id.localeCompare(a.id));
   const cited=papers.filter(paper=>Number.isFinite(paper.citations));
   const plottedByYear=cited.filter(paper=>paper.year>=PLOT_START_YEAR);
   $('#inventory').textContent=all.length+' records · '+atlasOrganRows.length+' major organs · 2 grouped views';
