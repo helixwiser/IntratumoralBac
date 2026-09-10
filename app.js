@@ -7,6 +7,7 @@ const palette=['#b83b35','#277b88','#b58a36','#7566a5','#5e7d4c','#8a5b43','#3e6
 const all=window.PAPERS.map(p=>({...p,short:p.title,review:p.reviewStatus||p.contentStatus||'Review status unavailable'}));
 const PAN_CANCER='Pan-cancer';
 const OTHERS='Others';
+const totalOrganCount=organConfig.filter(row=>row.id!=='pan_cancer').length;
 const organPaperCounts=all.reduce((counts,paper)=>{counts[paper.organId]=(counts[paper.organId]||0)+1;return counts;},{});
 const atlasOrganRows=organConfig.filter(row=>row.id!=='pan_cancer'&&(organPaperCounts[row.id]||0)>20).sort((a,b)=>(organPaperCounts[b.id]||0)-(organPaperCounts[a.id]||0));
 const atlasOrganIds=new Set(atlasOrganRows.map(row=>row.id));
@@ -94,7 +95,7 @@ function render(){
   const papers=[...chronologicalPapers].sort(paperSort==='citations'?(a,b)=>descending(p=>p.citations,a,b):paperSort==='attention'?(a,b)=>descending(attentionScore,a,b):dateOrder);
   const cited=papers.filter(paper=>Number.isFinite(paper.citations));
   const plottedByYear=cited.filter(paper=>paper.year>=PLOT_START_YEAR);
-  $('#inventory').textContent=all.length+' records · '+atlasOrganRows.length+' major organs · 2 grouped views';
+  $('#inventory').textContent=all.length+' records · '+totalOrganCount+' organs in total';
   const fullTextCount=all.filter(hasVerifiedFullTextReview).length;
   $('.editor-note .small').textContent=fullTextCount?fullTextCount+' verified full-text assessments available.':'Verified full-text assessments will appear here.';
   $('#selection-label').textContent=(organ==='All'?'All collections':organ)+' · '+papers.length+' papers';
@@ -168,8 +169,8 @@ function renderNavigation(){
   const map=$('.body-map');
   map.querySelectorAll('.organ-dot').forEach(node=>node.remove());
   atlasOrganRows.filter(row=>row.hotspot).forEach(row=>{const count=organPaperCounts[row.id]||0;const node=document.createElement('button');node.className='organ-dot';node.dataset.organ=row.en;node.setAttribute('aria-label','Explore '+row.en+' research, '+count+' papers');node.style.left=row.hotspot.x+'%';node.style.top=row.hotspot.y+'%';node.style.background=colors[row.en];node.innerHTML='<span>'+esc(row.en)+'<small>'+count+' papers</small></span>';map.append(node);});
-  $('#atlas-count').textContent=String(atlasOrganRows.length).padStart(2,'0')+' ORGANS · 02 GROUPED';
-  $('#atlas-groups').innerHTML=[PAN_CANCER,OTHERS].map(name=>'<button data-organ="'+name+'"><span>'+(name===PAN_CANCER?'CROSS-ORGAN EVIDENCE':'LOWER-VOLUME ORGANS')+'</span><b>'+name+'</b><small>'+collectionCount(name)+' papers</small></button>').join('');
+  $('#atlas-count').textContent=totalOrganCount+' ORGANS IN TOTAL';
+  $('#atlas-groups').innerHTML=[PAN_CANCER,OTHERS].map(name=>'<button data-organ="'+name+'"><span>'+(name===PAN_CANCER?'CROSS-ORGAN EVIDENCE':'OTHER ORGAN OR TISSUE')+'</span><b>'+name+'</b><small>'+collectionCount(name)+' papers</small></button>').join('');
 }
 
 function renderJournalMetrics(){
@@ -185,7 +186,7 @@ function renderOrganTaxa(){
   const panel=$('.reading-note');
   if(organ==='All'){
     const counts=collections.map(name=>[name,collectionCount(name)]);
-    panel.innerHTML='<span class="eyebrow">COLLECTION COVERAGE</span><h3>Papers,<br>by organ.</h3><p class="small">Organs with more than 20 papers have individual collections. Pan-cancer remains separate; lower-volume organs are grouped as Others.</p><ul class="organ-counts">'+counts.map(([name,count])=>'<li><button data-organ="'+esc(name)+'"><span>'+esc(name)+'</span><b>'+count+'</b><small>'+(count===1?'paper':'papers')+'</small></button></li>').join('')+'</ul>';
+    panel.innerHTML='<span class="eyebrow">COLLECTION COVERAGE</span><h3>Papers,<br>by organ.</h3><p class="small">Organs with more than 20 papers have individual collections. Pan-cancer remains separate; other organs or tissues are combined in Others.</p><ul class="organ-counts">'+counts.map(([name,count])=>'<li><button data-organ="'+esc(name)+'"><span>'+esc(name)+'</span><b>'+count+'</b><small>'+(count===1?'paper':'papers')+'</small></button></li>').join('')+'</ul>';
     return;
   }
   const genusCounts={},speciesCounts={};
