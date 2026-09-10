@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from datetime import date
 from hashlib import sha256
+from html import unescape
 from pathlib import Path
 import json
 import re
@@ -18,6 +19,7 @@ date_source = project / "02-更新指标" / "publication_dates_crossref.json"
 openalex_source = project / "02-更新指标" / "latest_openalex_metrics.json"
 attention_source = project / "02-更新指标" / "latest_attention_metrics.json"
 organ_source = project / "03-网站建设" / "config" / "organs.json"
+abstract_run = project / "00-搜索策略" / "runs" / "ITB-READING-AUDIT-20260910" / "sources"
 front_re = re.compile(r"\A---\s*\r?\n(.*?)\r?\n---\s*(?:\r?\n|\Z)", re.S)
 
 
@@ -47,6 +49,26 @@ def integer_or_none(value):
     return None
 
 
+def normalized_doi(value):
+    return re.sub(r"^https?://(?:dx\.)?doi\.org/", "", str(value or "").strip(), flags=re.I).casefold()
+
+
+def clean_abstract(value):
+    text = unescape(str(value or ""))
+    text = re.sub(r"<[^>]+>", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def load_jsonl(path: Path):
+    if not path.exists():
+        return []
+    rows = []
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        if line.strip():
+            rows.append(json.loads(line))
+    return rows
+
+
 metrics = json.loads(metric_source.read_text(encoding="utf-8-sig"))
 legacy_dates = json.loads(date_source.read_text(encoding="utf-8-sig")).get("dates", {})
 organ_config = json.loads(organ_source.read_text(encoding="utf-8-sig"))
@@ -59,6 +81,28 @@ journal_by_name = {norm_journal(row["journal"]): row for row in metrics["journal
 openalex_payload = json.loads(openalex_source.read_text(encoding="utf-8-sig")) if openalex_source.exists() else {}
 openalex_metrics = openalex_payload.get("metrics", {})
 attention_metrics = json.loads(attention_source.read_text(encoding="utf-8-sig")).get("metrics", {}) if attention_source.exists() else {}
+abstract_by_pmid = {}
+abstract_by_doi = {}
+abstract_by_title = {}
+for provider in ["pubmed", "openalex", "crossref"]:
+    for row in load_jsonl(abstract_run / provider / "records.jsonl"):
+        abstract_text = clean_abstract(row.get("abstract"))
+        if not abstract_text:
+            continue
+        record = {
+            "text": abstract_text,
+            "provider": "PubMed" if provider == "pubmed" else ("OpenAlex" if provider == "openalex" else "Crossref"),
+            "url": str(row.get("source_url") or ""),
+        }
+        pmid = str(row.get("pmid") or "").strip()
+        doi = normalized_doi(row.get("doi"))
+        title = re.sub(r"\s+", " ", str(row.get("title") or "")).strip().casefold()
+        if pmid and pmid not in abstract_by_pmid:
+            abstract_by_pmid[pmid] = record
+        if doi and doi not in abstract_by_doi:
+            abstract_by_doi[doi] = record
+        if title and title not in abstract_by_title:
+            abstract_by_title[title] = record
 papers = []
 
 for path in sorted(cards_root.rglob("*.md")):
@@ -85,19 +129,27 @@ for path in sorted(cards_root.rglob("*.md")):
     organ_row = organ_by_id[primary_organ_id]
     oa_metric = openalex_metrics.get(paper_id, {})
     attention = attention_metrics.get(paper_id, {})
+    pmid = "" if metadata.get("pmid") in (None, "null") else str(metadata.get("pmid") or "").strip()
+    doi = "" if metadata.get("doi") in (None, "null") else str(metadata.get("doi") or "").strip()
+    title = str(metadata.get("title") or "")
+    title_key = re.sub(r"\s+", " ", title).strip().casefold()
+    abstract_record = abstract_by_pmid.get(pmid) or abstract_by_doi.get(normalized_doi(doi)) or abstract_by_title.get(title_key)
     plot_date = metadata.get("plot_date") or oa_metric.get("publication_date") or legacy_dates.get(paper_id)
     citation_value = oa_metric.get("value_numeric") if oa_metric.get("retrieval_status") == "ok" else integer_or_none(metadata.get("citation_count"))
     papers.append({
         "id": paper_id,
-        "title": str(metadata.get("title") or ""),
+        "title": title,
         "cardTitle": str(metadata.get("card_title") or ""),
         "cardTitleEn": str(metadata.get("card_title_en") or ""),
         "author": str(metadata.get("first_author") or ""),
         "authors": metadata.get("authors") if isinstance(metadata.get("authors"), list) else [],
         "year": int(metadata["year"]),
         "journal": journal_metric["journal"],
-        "doi": "" if metadata.get("doi") in (None, "null") else str(metadata.get("doi") or ""),
-        "pmid": "" if metadata.get("pmid") in (None, "null") else str(metadata.get("pmid") or ""),
+        "doi": doi,
+        "pmid": pmid,
+        "abstract": abstract_record["text"] if abstract_record else "",
+        "abstractSource": abstract_record["provider"] if abstract_record else "",
+        "abstractSourceUrl": abstract_record["url"] if abstract_record else "",
         "organId": primary_organ_id,
         "organ": organ_row["en"],
         "organs": metadata.get("organs") if isinstance(metadata.get("organs"), list) else [folder_organ],
@@ -166,6 +218,8 @@ manifest = {
     "citation_available": sum(paper["citations"] is not None for paper in papers),
     "publication_date_available": sum(bool(paper["publishedOn"]) for paper in papers),
     "jif_available": sum(paper["jif"] is not None for paper in papers),
+    "abstract_available": sum(bool(paper["abstract"]) for paper in papers),
+    "abstract_missing": sum(not bool(paper["abstract"]) for paper in papers),
 }
 
 (root / "data.js").write_text("window.PAPERS=" + payload + ";\n", encoding="utf-8")

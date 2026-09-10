@@ -38,5 +38,7 @@
   },
   "citation_available": 745,
   "publication_date_available": 751,
-  "jif_available": 751
+  "jif_available": 751,
+  "abstract_available": 731,
+  "abstract_missing": 20
 }
