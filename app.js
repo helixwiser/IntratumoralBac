@@ -34,7 +34,7 @@ function jifFill(paper){
   return 'rgb('+low.map((v,i)=>Math.round(v+(high[i]-v)*t)).join(',')+')';
 }
 
-const pointRadius=paper=>Number.isFinite(paper.jif)?2*Math.sqrt(paper.jif):4;
+const pointRadius=paper=>Number.isFinite(paper.jif)?1.65*Math.sqrt(paper.jif):3.3;
 const button=(paper,context='collection')=>'<button class="paper-open" data-id="'+paper.id+'" data-context="'+context+'">'+esc(short(paper))+'</button>';
 const attentionScore=paper=>Number.isFinite(paper.altmetricScore)?paper.altmetricScore:null;
 const attentionLabel=paper=>attentionScore(paper)!==null?Math.ceil(attentionScore(paper)).toLocaleString('en-US'):'—';
@@ -141,7 +141,7 @@ function chart(id,data,floor,ceiling){
   for(let index=0;index<=4;index++){const y=145-index*30,value=floor+range*index/4;html+='<line x1="55" y1="'+y+'" x2="735" y2="'+y+'" stroke="#ececec"/><text x="44" y="'+(y+4)+'" text-anchor="end">'+Math.round(value)+'</text>';}
   for(let year=min;year<=max;year+=2){const x=75+(year-min)/(max-min)*635;html+='<text x="'+x+'" y="174" text-anchor="middle">'+year+'</text>';}
   if(!data.length)html+='<text x="395" y="88" text-anchor="middle">No records in this citation band</text>';
-  data.sort((a,b)=>pointRadius(a)-pointRadius(b)).forEach(paper=>{const x=75+(paper.year-min)/Math.max(1,max-min)*635;const y=145-(paper.citations-floor)/range*120;const category=collectionForPaper(paper);const label=category+' · '+paper.author+' '+paper.year+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" data-context="collection" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+jifFill(paper)+'" fill-opacity="1" stroke="'+chartInk()+'" stroke-width=".65" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
+  data.sort((a,b)=>pointRadius(a)-pointRadius(b)).forEach(paper=>{const x=75+(paper.year-min)/Math.max(1,max-min)*635;const y=145-(paper.citations-floor)/range*120;const category=collectionForPaper(paper);const label=category+' · '+paper.author+' '+paper.year+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" data-context="collection" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+jifFill(paper)+'" fill-opacity="1" stroke="#202020" stroke-width="1.1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
   $('#'+id).innerHTML=html;
 }
 
@@ -152,7 +152,7 @@ function chartMonthly(id,data){
   for(let index=0;index<=4;index++){const y=145-index*30,value=index*25;html+='<line x1="55" y1="'+y+'" x2="735" y2="'+y+'" stroke="#ececec"/><text x="44" y="'+(y+4)+'" text-anchor="end">'+value+'</text>';}
   for(let year=2025;year<=2026;year++)for(let month=0;month<12;month+=3){const date=Date.UTC(year,month,1);if(date<start||date>end)continue;const x=75+(date-start)/range*635;html+='<text x="'+x+'" y="174" text-anchor="middle">'+monthLabels[month]+' '+String(year).slice(2)+'</text>';}
   if(!data.length)html+='<text x="395" y="88" text-anchor="middle">No dated records since January 2025</text>';
-  data.sort((a,b)=>pointRadius(a.paper)-pointRadius(b.paper)).forEach(({paper,date})=>{const x=75+(date-start)/range*635;const y=145-paper.citations/100*120;const category=collectionForPaper(paper);const label=category+' · '+paper.author+' · '+paper.publishedOn+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" data-context="collection" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+jifFill(paper)+'" fill-opacity="1" stroke="'+chartInk()+'" stroke-width=".65" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
+  data.sort((a,b)=>pointRadius(a.paper)-pointRadius(b.paper)).forEach(({paper,date})=>{const x=75+(date-start)/range*635;const y=145-paper.citations/100*120;const category=collectionForPaper(paper);const label=category+' · '+paper.author+' · '+paper.publishedOn+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" data-context="collection" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+jifFill(paper)+'" fill-opacity="1" stroke="#202020" stroke-width="1.1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
   $('#'+id).innerHTML=html;
 }
 
