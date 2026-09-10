@@ -13,7 +13,7 @@ const atlasOrganRows=organConfig.filter(row=>row.id!=='pan_cancer'&&(organPaperC
 const atlasOrganIds=new Set(atlasOrganRows.map(row=>row.id));
 const collections=[...atlasOrganRows.map(row=>row.en),PAN_CANCER,OTHERS];
 const colors={...Object.fromEntries(atlasOrganRows.map((row,index)=>[row.en,row.color||palette[index%palette.length]])),[PAN_CANCER]:'#202020',[OTHERS]:'#989898'};
-let organ='All',limit=8,paperSort='date',journalSort='papers';
+let organ='All',limit=8,paperSort='year',journalSort='papers';
 const $=selector=>document.querySelector(selector);
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const collectionForPaper=paper=>paper.organId==='pan_cancer'?PAN_CANCER:atlasOrganIds.has(paper.organId)?paper.organ:OTHERS;
