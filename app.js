@@ -24,6 +24,15 @@ const jifLabel=paper=>Number.isFinite(paper.jif)?paper.jif.toFixed(1):'Unavailab
 const altmetricLabel=paper=>paper.altmetricStatus==='access_required'?'Live badge available; an archived numeric value requires API access':paper.altmetricStatus==='no_doi'?'Unavailable (no DOI)':paper.altmetricStatus||'Unavailable';
 const hasVerifiedFullTextReview=paper=>paper.reviewStatus==='verified_full_text'||paper.contentStatus==='verified_full_text';
 const focusCopy=paper=>hasVerifiedFullTextReview(paper)?(paper.whyRead||paper.summary):paper.summary;
+const chartInk=()=>organ==='All'?'#626267':'#a92428';
+const jifCeiling=Math.max(1,...all.filter(p=>Number.isFinite(p.jif)).map(p=>p.jif));
+function jifFill(paper){
+  if(!Number.isFinite(paper.jif))return 'none';
+  const t=Math.sqrt(Math.max(0,Math.min(1,paper.jif/jifCeiling)));
+  const low=organ==='All'?[66,66,72]:[135,26,31],high=organ==='All'?[229,229,232]:[249,213,215];
+  return 'rgb('+low.map((v,i)=>Math.round(v+(high[i]-v)*t)).join(',')+')';
+}
+
 const pointRadius=paper=>Number.isFinite(paper.jif)?2*Math.sqrt(paper.jif):4;
 const button=(paper,context='collection')=>'<button class="paper-open" data-id="'+paper.id+'" data-context="'+context+'">'+esc(short(paper))+'</button>';
 const attention=paper=>'<span class="citation-count"><b>'+citations(paper)+'</b><span>Citations</span></span>';
@@ -84,6 +93,10 @@ function render(){
   const fullTextCount=all.filter(hasVerifiedFullTextReview).length;
   $('.editor-note .small').textContent=fullTextCount?fullTextCount+' verified full-text assessments available.':'Verified full-text assessments will appear here.';
   $('#selection-label').textContent=(organ==='All'?'All collections':organ)+' · '+papers.length+' papers';
+  const overview=organ==='All';
+  $('.research-path').hidden=!overview;
+  $('.focus').hidden=overview;
+  $('.claim-section').hidden=!overview;
   document.querySelectorAll('nav button').forEach(button=>{const active=button.dataset.organ===organ;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
   const eligible=papers.filter(p=>p.publicationStatus!=='retracted');
   const focus=organ==='All'
@@ -106,6 +119,7 @@ function render(){
   const pre2010Count=cited.filter(paper=>paper.year<PLOT_START_YEAR).length;
   plotCoverage.textContent=(annualCount+monthly.length)+' papers shown: '+annualCount+' established or landmark papers since 2010, and '+monthly.length+' recent papers in the monthly Emerging panel. '+pre2010Count+' cited papers published before 2010 remain in the collection table.';
   renderOrganTaxa();
+  renderLegend();
 }
 
 function chart(id,data,floor,ceiling){
@@ -115,10 +129,10 @@ function chart(id,data,floor,ceiling){
   }
   const min=PLOT_START_YEAR,max=Math.max(...all.map(paper=>paper.year)),range=Math.max(1,ceiling-floor);
   let html='';
-  for(let index=0;index<=4;index++){const y=145-index*30,value=floor+range*index/4;html+='<line x1="55" y1="'+y+'" x2="735" y2="'+y+'" stroke="#e7e7e7"/><text x="44" y="'+(y+4)+'" text-anchor="end">'+Math.round(value)+'</text>';}
+  for(let index=0;index<=4;index++){const y=145-index*30,value=floor+range*index/4;html+='<line x1="55" y1="'+y+'" x2="735" y2="'+y+'" stroke="#ececec"/><text x="44" y="'+(y+4)+'" text-anchor="end">'+Math.round(value)+'</text>';}
   for(let year=min;year<=max;year+=2){const x=75+(year-min)/(max-min)*635;html+='<text x="'+x+'" y="174" text-anchor="middle">'+year+'</text>';}
   if(!data.length)html+='<text x="395" y="88" text-anchor="middle">No records in this citation band</text>';
-  data.sort((a,b)=>(b.jif??0)-(a.jif??0)).forEach(paper=>{const x=75+(paper.year-min)/Math.max(1,max-min)*635;const y=145-(paper.citations-floor)/range*120;const category=collectionForPaper(paper);const label=category+' · '+paper.author+' '+paper.year+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" data-context="collection" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+(Number.isFinite(paper.jif)?colors[category]:'none')+'" fill-opacity=".60" stroke="#808080" stroke-width="1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
+  data.sort((a,b)=>pointRadius(a)-pointRadius(b)).forEach(paper=>{const x=75+(paper.year-min)/Math.max(1,max-min)*635;const y=145-(paper.citations-floor)/range*120;const category=collectionForPaper(paper);const label=category+' · '+paper.author+' '+paper.year+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" data-context="collection" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+jifFill(paper)+'" fill-opacity="1" stroke="'+chartInk()+'" stroke-width=".65" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
   $('#'+id).innerHTML=html;
 }
 
@@ -126,16 +140,17 @@ function chartMonthly(id,data){
   const start=Date.UTC(2025,0,1),end=Date.parse(SNAPSHOT_DATE+'T00:00:00Z'),range=end-start,monthLabels={0:'Jan',3:'Apr',6:'Jul',9:'Oct'};
   data=data.map(paper=>({paper,date:preciseMonthlyDate(paper)})).filter(item=>item.date!==null&&item.date>=start&&item.date<=end);
   let html='';
-  for(let index=0;index<=4;index++){const y=145-index*30,value=index*25;html+='<line x1="55" y1="'+y+'" x2="735" y2="'+y+'" stroke="#e7e7e7"/><text x="44" y="'+(y+4)+'" text-anchor="end">'+value+'</text>';}
+  for(let index=0;index<=4;index++){const y=145-index*30,value=index*25;html+='<line x1="55" y1="'+y+'" x2="735" y2="'+y+'" stroke="#ececec"/><text x="44" y="'+(y+4)+'" text-anchor="end">'+value+'</text>';}
   for(let year=2025;year<=2026;year++)for(let month=0;month<12;month+=3){const date=Date.UTC(year,month,1);if(date<start||date>end)continue;const x=75+(date-start)/range*635;html+='<text x="'+x+'" y="174" text-anchor="middle">'+monthLabels[month]+' '+String(year).slice(2)+'</text>';}
   if(!data.length)html+='<text x="395" y="88" text-anchor="middle">No dated records since January 2025</text>';
-  data.sort((a,b)=>(b.paper.jif??0)-(a.paper.jif??0)).forEach(({paper,date})=>{const x=75+(date-start)/range*635;const y=145-paper.citations/100*120;const category=collectionForPaper(paper);const label=category+' · '+paper.author+' · '+paper.publishedOn+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" data-context="collection" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+(Number.isFinite(paper.jif)?colors[category]:'none')+'" fill-opacity=".60" stroke="#808080" stroke-width="1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
+  data.sort((a,b)=>pointRadius(a.paper)-pointRadius(b.paper)).forEach(({paper,date})=>{const x=75+(date-start)/range*635;const y=145-paper.citations/100*120;const category=collectionForPaper(paper);const label=category+' · '+paper.author+' · '+paper.publishedOn+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" data-context="collection" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+jifFill(paper)+'" fill-opacity="1" stroke="'+chartInk()+'" stroke-width=".65" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
   $('#'+id).innerHTML=html;
 }
 
 function renderLegend(){
-  $('.legend').innerHTML=collections.map(name=>'<span><i style="background:'+colors[name]+'"></i>'+name+'</span>').join('');
-  $('.chart-panel p.small').textContent='Landmark and Established: publication year from 2010. Emerging: publication month from January 2025. Y: citations. Circle area: 2025 Journal Impact Factor. Colors use the atlas collections: organs with more than 20 papers, Pan-cancer, and Others. Altmetric Attention Scores are supplied live by Altmetric.com.';
+  $('.legend').innerHTML='<span><i style="background:'+chartInk()+'"></i>'+esc(organ==='All'?'All collections':organ)+'</span><span class="outline-key">○ JIF unavailable</span>';
+  $('.chart-panel p.small').textContent='Landmark and Established: publication year from 2010. Emerging: publication month from January 2025. Y: citations. Circle area: 2025 Journal Impact Factor. Gray: overview; red: selected collection. Higher JIF means a larger, lighter point, drawn above smaller points. Click an overlap to choose a paper. JIF is a journal metric, not a paper-quality score.';
+  document.querySelectorAll('.size-legend circle').forEach((circle,i)=>{circle.style.fill=jifFill({jif:[2,10,50][i]});circle.style.stroke='#202020';});
   $('#chart-low').previousElementSibling.querySelector('span').textContent='<100 citations · monthly from 2025';
   $('#chart-low').setAttribute('aria-label','Emerging papers since 2025, plotted by publication month and citation count');
 }
@@ -182,7 +197,20 @@ function addAltmetricBadges(){
   setTimeout(()=>window._altmetric_embed_init&&window._altmetric_embed_init(),0);
 }
 
-document.addEventListener('click',event=>{const organButton=event.target.closest('[data-organ]');if(organButton){organ=organButton.dataset.organ;limit=8;render();}const paperButton=event.target.closest('[data-id]');if(paperButton)detail(paperButton.dataset.id,paperButton.dataset.context||'collection');});
+function chooseOverlap(event,clicked){
+  const svg=clicked.ownerSVGElement,matrix=svg.getScreenCTM();
+  if(!matrix)return false;
+  const pt=new DOMPoint(event.clientX,event.clientY).matrixTransform(matrix.inverse());
+  const circles=[...svg.querySelectorAll('circle.dot')].filter(c=>Math.hypot(pt.x-c.cx.baseVal.value,pt.y-c.cy.baseVal.value)<=c.r.baseVal.value+1);
+  const ids=new Set([clicked.dataset.id,...circles.map(c=>c.dataset.id)]);
+  if(ids.size<2)return false;
+  const papers=all.filter(p=>ids.has(p.id)).sort((a,b)=>pointRadius(b)-pointRadius(a));
+  $('#detail').innerHTML='<span class="eyebrow">OVERLAPPING PAPERS</span><h2>'+papers.length+' papers at this position</h2><p>Choose a paper to open its record. Larger points are listed first, including papers hidden underneath.</p><div class="overlap-papers">'+papers.map(p=>'<button class="overlap-paper" data-id="'+esc(p.id)+'"><span class="overlap-meta">'+esc(p.author)+' · '+p.year+' · '+esc(p.organ)+'</span><strong>'+esc(p.title)+'</strong><span>'+esc(p.journal)+' · 2025 JIF: '+jifLabel(p)+' · '+citations(p)+' citations</span></button>').join('')+'</div>';
+  $('#paper-dialog').showModal();
+  return true;
+}
+
+document.addEventListener('click',event=>{const organButton=event.target.closest('[data-organ]');if(organButton){organ=organButton.dataset.organ;limit=8;render();}const paperButton=event.target.closest('[data-id]');if(paperButton){if(paperButton.matches('circle.dot')&&event.detail!==0&&chooseOverlap(event,paperButton))return;detail(paperButton.dataset.id,paperButton.dataset.context||'collection');}});
 $('.chart-plots').addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&event.target.dataset.id){event.preventDefault();detail(event.target.dataset.id,event.target.dataset.context||'collection');}});
 $('.close').onclick=()=>$('#paper-dialog').close();
 $('#paper-dialog').addEventListener('click',event=>{if(event.target===$('#paper-dialog'))$('#paper-dialog').close();});
