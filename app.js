@@ -12,7 +12,7 @@ const atlasOrganRows=organConfig.filter(row=>row.id!=='pan_cancer'&&(organPaperC
 const atlasOrganIds=new Set(atlasOrganRows.map(row=>row.id));
 const collections=[...atlasOrganRows.map(row=>row.en),PAN_CANCER,OTHERS];
 const colors={...Object.fromEntries(atlasOrganRows.map((row,index)=>[row.en,row.color||palette[index%palette.length]])),[PAN_CANCER]:'#202020',[OTHERS]:'#989898'};
-let organ='All',limit=8;
+let organ='All',limit=8,paperSort='date',journalSort='papers';
 const $=selector=>document.querySelector(selector);
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const collectionForPaper=paper=>paper.organId==='pan_cancer'?PAN_CANCER:atlasOrganIds.has(paper.organId)?paper.organ:OTHERS;
@@ -35,7 +35,9 @@ function jifFill(paper){
 
 const pointRadius=paper=>Number.isFinite(paper.jif)?2*Math.sqrt(paper.jif):4;
 const button=(paper,context='collection')=>'<button class="paper-open" data-id="'+paper.id+'" data-context="'+context+'">'+esc(short(paper))+'</button>';
-const attention=paper=>'<span class="citation-count"><b>'+citations(paper)+'</b><span>Citations</span></span>';
+const attentionScore=paper=>Number.isFinite(paper.altmetricScore)?paper.altmetricScore:null;
+const attentionLabel=paper=>attentionScore(paper)!==null?Math.ceil(attentionScore(paper)).toLocaleString('en-US'):'—';
+const metricCell=(value,label)=>'<span class="citation-count"><b>'+value+'</b><span>'+label+'</span></span>';
 const statusBadge=paper=>paper.publicationStatus==='retracted'?'<span class="status-badge retracted">RETRACTED</span>':paper.publicationVersion==='preprint'?'<span class="status-badge">PREPRINT</span>':'';
 const taxonLabel=taxon=>String(taxon||'').replaceAll('_',' ').replace(/\s+/g,' ').trim();
 const taxonRanks=taxon=>{
@@ -86,7 +88,10 @@ function detail(id,context='collection'){
 }
 
 function render(){
-  const papers=selected().sort((a,b)=>publicationSortTimestamp(b)-publicationSortTimestamp(a)||b.id.localeCompare(a.id));
+  const dateOrder=(a,b)=>publicationSortTimestamp(b)-publicationSortTimestamp(a)||b.id.localeCompare(a.id);
+  const descending=(accessor,a,b)=>{const av=accessor(a),bv=accessor(b),aok=Number.isFinite(av),bok=Number.isFinite(bv);if(aok!==bok)return bok-aok;if(aok&&av!==bv)return bv-av;return dateOrder(a,b);};
+  const chronologicalPapers=selected().sort(dateOrder);
+  const papers=[...chronologicalPapers].sort(paperSort==='citations'?(a,b)=>descending(p=>p.citations,a,b):paperSort==='attention'?(a,b)=>descending(attentionScore,a,b):dateOrder);
   const cited=papers.filter(paper=>Number.isFinite(paper.citations));
   const plottedByYear=cited.filter(paper=>paper.year>=PLOT_START_YEAR);
   $('#inventory').textContent=all.length+' records · '+atlasOrganRows.length+' major organs · 2 grouped views';
@@ -97,6 +102,9 @@ function render(){
   $('.research-path').hidden=!overview;
   $('.focus').hidden=overview;
   $('.claim-section').hidden=!overview;
+  document.body.dataset.view=overview?'overview':'organ';
+  $('#focus-label').textContent=overview?'':'· '+organ;
+  document.querySelectorAll('[data-paper-sort]').forEach(button=>{const active=button.dataset.paperSort===paperSort;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
   document.querySelectorAll('nav button').forEach(button=>{const active=button.dataset.organ===organ;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
   const eligible=papers.filter(p=>p.publicationStatus!=='retracted');
   const focus=organ==='All'
@@ -105,8 +113,8 @@ function render(){
   $('#focus').innerHTML=focus.length
     ? focus.map(paper=>'<article class="focus-item"><span class="eyebrow">'+esc(paper.organ)+' · '+esc(paper.journal)+'</span><h3>'+button(paper,'focus')+'</h3><p class="summary">'+esc(focusCopy(paper)||'Explore the study design and its central research question.')+'</p><span class="meta">'+esc(paper.author)+' / '+paper.year+'<br>Citations: '+citations(paper)+(hasVerifiedFullTextReview(paper)?' · Full-text review available':'')+'</span></article>').join('')
     : '<p class="focus-empty">No papers currently meet the landmark selection criteria for this collection.</p>';
-  $('#recent').innerHTML=papers.slice(0,6).map(paper=>'<article class="recent-item"><div class="meta">'+paper.year+' · '+esc(paper.organ)+' / '+esc(paper.author)+'</div><h3>'+button(paper)+'</h3></article>').join('');
-  $('#papers').innerHTML=papers.slice(0,limit).map(paper=>'<tr><td>'+paper.year+'<br><span class="small">'+esc(paper.organ)+'</span></td><td>'+statusBadge(paper)+button(paper)+'</td><td>'+esc(paper.journal)+'<br><span class="small">2025 JIF: '+jifLabel(paper)+'</span></td><td>'+attention(paper)+'</td></tr>').join('');
+  $('#recent').innerHTML=chronologicalPapers.slice(0,6).map(paper=>'<article class="recent-item"><div class="meta">'+paper.year+' · '+esc(paper.organ)+' / '+esc(paper.author)+'</div><h3>'+button(paper)+'</h3></article>').join('');
+  $('#papers').innerHTML=papers.slice(0,limit).map(paper=>'<tr><td>'+paper.year+'<br><span class="small">'+esc(paper.organ)+'</span></td><td>'+statusBadge(paper)+button(paper)+'</td><td>'+esc(paper.journal)+'<br><span class="small">2025 JIF: '+jifLabel(paper)+'</span></td><td>'+metricCell(citations(paper),'Citations')+'</td><td class="attention-cell">'+metricCell(attentionLabel(paper),'Attention')+'</td></tr>').join('');
   $('#more').hidden=limit>=papers.length;
   chart('chart-high',plottedByYear.filter(paper=>paper.citations>500),500,Math.max(600,Math.ceil(Math.max(...plottedByYear.filter(paper=>paper.citations>500).map(paper=>paper.citations),500)/100)*100));
   chart('chart-mid',plottedByYear.filter(paper=>paper.citations>=100&&paper.citations<=500),100,500);
@@ -168,7 +176,9 @@ function renderJournalMetrics(){
   const rows=window.JOURNAL_METRICS.journals.map(row=>({...row,paper_count:all.filter(paper=>paper.journal===row.journal).length})).filter(row=>row.paper_count>0&&Number.isFinite(row.jif_2025));
   const covered=all.filter(paper=>Number.isFinite(paper.jif)).length;
   $('#jif-coverage').textContent=covered+' of '+all.length+' papers';
-  $('#journal-table').innerHTML=rows.sort((a,b)=>b.paper_count-a.paper_count||a.journal.localeCompare(b.journal)).map(row=>'<tr><td>'+esc(row.journal)+'</td><td>'+row.paper_count+'</td><td>'+row.jif_2025.toFixed(1)+'</td><td>'+esc(row.status==='verified_publisher'?'Publisher verified':'Institutional JCR table')+'</td><td>'+(row.source_url?'<a href="'+esc(row.source_url)+'" target="_blank" rel="noopener">Source ↗</a>':'—')+'</td></tr>').join('');
+  const sort=journalSort==='jif'?(a,b)=>b.jif_2025-a.jif_2025||b.paper_count-a.paper_count||a.journal.localeCompare(b.journal):(a,b)=>b.paper_count-a.paper_count||b.jif_2025-a.jif_2025||a.journal.localeCompare(b.journal);
+  document.querySelectorAll('[data-journal-sort]').forEach(button=>{const active=button.dataset.journalSort===journalSort;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
+  $('#journal-table').innerHTML=rows.sort(sort).map(row=>'<tr><td>'+esc(row.journal)+'</td><td>'+row.paper_count+'</td><td>'+row.jif_2025.toFixed(1)+'</td><td>'+esc(row.status==='verified_publisher'?'Publisher verified':'Institutional JCR table')+'</td><td>'+(row.source_url?'<a href="'+esc(row.source_url)+'" target="_blank" rel="noopener">Source ↗</a>':'—')+'</td></tr>').join('');
 }
 
 function renderOrganTaxa(){
@@ -193,7 +203,7 @@ function renderOrganTaxa(){
 }
 
 function addAltmetricBadges(){
-  document.querySelectorAll('#papers tr').forEach(row=>{if(row.querySelector('.altmetric-embed'))return;const id=row.querySelector('[data-id]')?.dataset.id;const paper=all.find(item=>item.id===id);if(!paper?.doi)return;const badge=document.createElement('div');badge.className='altmetric-embed';badge.dataset.doi=paper.doi;badge.dataset.badgeType='donut';badge.dataset.hideNoMentions='true';badge.setAttribute('aria-label','Altmetric Attention Score');row.cells[3].append(badge);});
+  document.querySelectorAll('#papers tr').forEach(row=>{if(row.querySelector('.altmetric-embed'))return;const id=row.querySelector('[data-id]')?.dataset.id;const paper=all.find(item=>item.id===id);if(!paper?.doi)return;const badge=document.createElement('div');badge.className='altmetric-embed';badge.dataset.doi=paper.doi;badge.dataset.badgeType='donut';badge.dataset.hideNoMentions='true';badge.setAttribute('aria-label','Altmetric Attention Score');row.querySelector('.attention-cell').append(badge);});
   setTimeout(()=>window._altmetric_embed_init&&window._altmetric_embed_init(),0);
 }
 
@@ -210,7 +220,7 @@ function chooseOverlap(event,clicked){
   return true;
 }
 
-document.addEventListener('click',event=>{const organButton=event.target.closest('[data-organ]');if(organButton){organ=organButton.dataset.organ;limit=8;render();}const paperButton=event.target.closest('[data-id]');if(paperButton){if(paperButton.matches('circle.dot')&&event.detail!==0&&chooseOverlap(event,paperButton))return;detail(paperButton.dataset.id,paperButton.dataset.context||'collection');}});
+document.addEventListener('click',event=>{const organButton=event.target.closest('[data-organ]');if(organButton){organ=organButton.dataset.organ;limit=8;render();}const paperSortButton=event.target.closest('[data-paper-sort]');if(paperSortButton){paperSort=paperSortButton.dataset.paperSort;limit=8;render();}const journalSortButton=event.target.closest('[data-journal-sort]');if(journalSortButton){journalSort=journalSortButton.dataset.journalSort;renderJournalMetrics();}const paperButton=event.target.closest('[data-id]');if(paperButton){if(paperButton.matches('circle.dot')&&event.detail!==0&&chooseOverlap(event,paperButton))return;detail(paperButton.dataset.id,paperButton.dataset.context||'collection');}});
 $('.chart-plots').addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&event.target.dataset.id){event.preventDefault();detail(event.target.dataset.id,event.target.dataset.context||'collection');}});
 $('.close').onclick=()=>$('#paper-dialog').close();
 $('#paper-dialog').addEventListener('click',event=>{if(event.target===$('#paper-dialog'))$('#paper-dialog').close();});
