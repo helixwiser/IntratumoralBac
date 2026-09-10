@@ -172,7 +172,7 @@ manifest = {
 (root / "organ-config.js").write_text("window.ORGAN_CONFIG=" + json.dumps(web_organs, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8")
 (root / "data-manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 (root / "assets").mkdir(exist_ok=True)
-shutil.copy2(root.parent / "素材库" / "人体器官导航_主要器官_v2.png", root / "assets" / "organ-map.png")
+shutil.copy2(root.parent / "素材库" / "人体器官导航_乳腺投影_v4.png", root / "assets" / "organ-map.png")
 
 out = root / "dist"
 out.mkdir(exist_ok=True)
