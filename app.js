@@ -1,6 +1,8 @@
 const SNAPSHOT_DATE='2026-09-09';
 const PLOT_START_YEAR=2010;
 const organConfig=window.ORGAN_CONFIG||[];
+const landmarkConfig=window.LANDMARK_CONFIG||{};
+const curatedLandmarkIds=new Set(landmarkConfig.paperIds||[]);
 const palette=['#b83b35','#277b88','#b58a36','#7566a5','#5e7d4c','#8a5b43','#3e6f8e','#927b34','#6f5688','#47785d'];
 const all=window.PAPERS.map(p=>({...p,short:p.title,review:p.reviewStatus||p.contentStatus||'Review status unavailable'}));
 const PAN_CANCER='Pan-cancer';
@@ -84,13 +86,12 @@ function render(){
   $('#selection-label').textContent=(organ==='All'?'All collections':organ)+' · '+papers.length+' papers';
   document.querySelectorAll('nav button').forEach(button=>{const active=button.dataset.organ===organ;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
   const eligible=papers.filter(p=>p.publicationStatus!=='retracted');
-  const preferred=eligible.filter(p=>p.selectionReason).sort((a,b)=>(b.citations??-1)-(a.citations??-1)).slice(0,3).map(p=>p.id);
-  const focus=preferred.map(id=>papers.find(paper=>paper.id===id)).filter(Boolean);
-  for(const paper of [...eligible].sort((a,b)=>(b.citations??0)-(a.citations??0))){
-    if(focus.length>=3)break;
-    if(!focus.includes(paper))focus.push(paper);
-  }
-  $('#focus').innerHTML=focus.map(paper=>'<article class="focus-item"><span class="eyebrow">'+esc(paper.organ)+' · '+esc(paper.journal)+'</span><h3>'+button(paper,'focus')+'</h3><p class="summary">'+esc(focusCopy(paper)||'Explore the study design and its central research question.')+'</p><span class="meta">'+esc(paper.author)+' / '+paper.year+'<br>Citations: '+citations(paper)+(hasVerifiedFullTextReview(paper)?' · Full-text review available':'')+'</span></article>').join('');
+  const focus=organ==='All'
+    ? [...eligible].sort((a,b)=>(b.citations??-1)-(a.citations??-1)).slice(0,landmarkConfig.overview?.limit||3)
+    : eligible.filter(paper=>curatedLandmarkIds.has(paper.id)).sort((a,b)=>(b.citations??-1)-(a.citations??-1));
+  $('#focus').innerHTML=focus.length
+    ? focus.map(paper=>'<article class="focus-item"><span class="eyebrow">'+esc(paper.organ)+' · '+esc(paper.journal)+'</span><h3>'+button(paper,'focus')+'</h3><p class="summary">'+esc(focusCopy(paper)||'Explore the study design and its central research question.')+'</p><span class="meta">'+esc(paper.author)+' / '+paper.year+'<br>Citations: '+citations(paper)+(hasVerifiedFullTextReview(paper)?' · Full-text review available':'')+'</span></article>').join('')
+    : '<p class="focus-empty">No papers currently meet the landmark selection criteria for this collection.</p>';
   $('#recent').innerHTML=papers.slice(0,6).map(paper=>'<article class="recent-item"><div class="meta">'+paper.year+' · '+esc(paper.organ)+' / '+esc(paper.author)+'</div><h3>'+button(paper)+'</h3></article>').join('');
   $('#papers').innerHTML=papers.slice(0,limit).map(paper=>'<tr><td>'+paper.year+'<br><span class="small">'+esc(paper.organ)+'</span></td><td>'+statusBadge(paper)+button(paper)+'</td><td>'+esc(paper.journal)+'<br><span class="small">2025 JIF: '+jifLabel(paper)+'</span></td><td>'+attention(paper)+'</td></tr>').join('');
   $('#more').hidden=limit>=papers.length;

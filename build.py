@@ -20,6 +20,7 @@ openalex_source = project / "02-更新指标" / "latest_openalex_metrics.json"
 attention_source = project / "02-更新指标" / "latest_attention_metrics.json"
 organ_source = project / "03-网站建设" / "config" / "organs.json"
 abstract_run = project / "00-搜索策略" / "runs" / "ITB-READING-AUDIT-20260910" / "sources"
+landmark_source = root / "landmark-config.json"
 front_re = re.compile(r"\A---\s*\r?\n(.*?)\r?\n---\s*(?:\r?\n|\Z)", re.S)
 
 
@@ -72,6 +73,7 @@ def load_jsonl(path: Path):
 metrics = json.loads(metric_source.read_text(encoding="utf-8-sig"))
 legacy_dates = json.loads(date_source.read_text(encoding="utf-8-sig")).get("dates", {})
 organ_config = json.loads(organ_source.read_text(encoding="utf-8-sig"))
+landmark_config = json.loads(landmark_source.read_text(encoding="utf-8-sig"))
 organ_by_zh = {row["zh"]: row for row in organ_config["organs"]}
 organ_by_id = {row["id"]: row for row in organ_config["organs"]}
 def norm_journal(value):
@@ -201,6 +203,15 @@ ids = [paper["id"] for paper in papers]
 if len(ids) != len(set(ids)):
     raise ValueError("Duplicate paper IDs in canonical export")
 
+paper_by_doi = {normalized_doi(paper["doi"]): paper for paper in papers if normalized_doi(paper["doi"])}
+landmark_dois = [normalized_doi(value) for value in landmark_config["collection_focus"]["dois"]]
+if len(landmark_dois) != len(set(landmark_dois)):
+    raise ValueError("Duplicate DOI in landmark configuration")
+missing_landmark_dois = [doi for doi in landmark_dois if doi not in paper_by_doi]
+if missing_landmark_dois:
+    raise ValueError(f"Landmark DOI not found in canonical export: {missing_landmark_dois}")
+landmark_config["paperIds"] = [paper_by_doi[doi]["id"] for doi in landmark_dois]
+
 counts = Counter(norm_journal(paper["journal"]) for paper in papers)
 for row in metrics["journals"]:
     row["paper_count"] = counts[norm_journal(row["journal"])]
@@ -225,13 +236,14 @@ manifest = {
 (root / "data.js").write_text("window.PAPERS=" + payload + ";\n", encoding="utf-8")
 (root / "journal-metrics.js").write_text("window.JOURNAL_METRICS=" + metric_payload + ";\n", encoding="utf-8")
 (root / "organ-config.js").write_text("window.ORGAN_CONFIG=" + json.dumps(web_organs, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8")
+(root / "landmark-config.js").write_text("window.LANDMARK_CONFIG=" + json.dumps(landmark_config, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8")
 (root / "data-manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 (root / "assets").mkdir(exist_ok=True)
 shutil.copy2(root.parent / "素材库" / "人体器官导航_乳腺投影_v4.png", root / "assets" / "organ-map.png")
 
 out = root / "dist"
 out.mkdir(exist_ok=True)
-for name in ["index.html", "latest.html", "style.css", "app.js", "latest.js", "data.js", "journal-metrics.js", "organ-config.js", "data-manifest.json", "journal_impact_factors_2025.json"]:
+for name in ["index.html", "latest.html", "style.css", "app.js", "latest.js", "data.js", "journal-metrics.js", "organ-config.js", "landmark-config.js", "landmark-config.json", "data-manifest.json", "journal_impact_factors_2025.json"]:
     shutil.copy2(root / name, out / name)
 shutil.copytree(root / "assets", out / "assets", dirs_exist_ok=True)
 print(json.dumps(manifest, ensure_ascii=False))
