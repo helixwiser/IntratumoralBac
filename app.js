@@ -1,13 +1,20 @@
 const SNAPSHOT_DATE='2026-09-09';
 const organConfig=window.ORGAN_CONFIG||[];
-const collections=organConfig.map(row=>row.en);
 const palette=['#b83b35','#277b88','#b58a36','#7566a5','#5e7d4c','#8a5b43','#3e6f8e','#927b34','#6f5688','#47785d'];
-const colors=Object.fromEntries(organConfig.map((row,index)=>[row.en,row.color||palette[index%palette.length]]));
 const all=window.PAPERS.map(p=>({...p,short:p.cardTitleEn||p.title,review:p.reviewStatus||p.contentStatus||'Review status unavailable'}));
+const PAN_CANCER='Pan-cancer';
+const OTHERS='Others';
+const organPaperCounts=all.reduce((counts,paper)=>{counts[paper.organId]=(counts[paper.organId]||0)+1;return counts;},{});
+const atlasOrganRows=organConfig.filter(row=>row.id!=='pan_cancer'&&(organPaperCounts[row.id]||0)>20).sort((a,b)=>(organPaperCounts[b.id]||0)-(organPaperCounts[a.id]||0));
+const atlasOrganIds=new Set(atlasOrganRows.map(row=>row.id));
+const collections=[...atlasOrganRows.map(row=>row.en),PAN_CANCER,OTHERS];
+const colors={...Object.fromEntries(atlasOrganRows.map((row,index)=>[row.en,row.color||palette[index%palette.length]])),[PAN_CANCER]:'#202020',[OTHERS]:'#989898'};
 let organ='All',limit=8;
 const $=selector=>document.querySelector(selector);
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-const selected=()=>all.filter(paper=>organ==='All'||paper.organ===organ);
+const collectionForPaper=paper=>paper.organId==='pan_cancer'?PAN_CANCER:atlasOrganIds.has(paper.organId)?paper.organ:OTHERS;
+const selected=()=>all.filter(paper=>organ==='All'||collectionForPaper(paper)===organ);
+const collectionCount=name=>all.filter(paper=>collectionForPaper(paper)===name).length;
 const short=paper=>paper.short||paper.title;
 const citations=paper=>Number.isFinite(paper.citations)?paper.citations.toLocaleString('en-US'):'—';
 const jifLabel=paper=>Number.isFinite(paper.jif)?paper.jif.toFixed(1):'Unavailable';
@@ -48,10 +55,10 @@ function detail(id){
 function render(){
   const papers=selected().sort((a,b)=>String(b.publishedOn||b.year).localeCompare(String(a.publishedOn||a.year))||b.id.localeCompare(a.id));
   const cited=papers.filter(paper=>Number.isFinite(paper.citations));
-  $('#inventory').textContent=all.length+' records · '+collections.length+' organ collections';
+  $('#inventory').textContent=all.length+' records · '+atlasOrganRows.length+' major organs · 2 grouped views';
   const fullTextCount=all.filter(paper=>paper.contentStatus==='full_text_reviewed').length;
   $('.editor-note .small').textContent=all.length+' basic records · '+fullTextCount+' full-text assessments completed.';
-  $('#selection-label').textContent=(organ==='All'?'All organs':organ)+' · '+papers.length+' papers';
+  $('#selection-label').textContent=(organ==='All'?'All collections':organ)+' · '+papers.length+' papers';
   document.querySelectorAll('nav button').forEach(button=>{const active=button.dataset.organ===organ;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
   const eligible=papers.filter(p=>p.publicationStatus!=='retracted');
   const preferred=eligible.filter(p=>p.selectionReason).sort((a,b)=>(b.citations??-1)-(a.citations??-1)).slice(0,3).map(p=>p.id);
@@ -85,7 +92,7 @@ function chart(id,data,floor,ceiling){
   for(let index=0;index<=4;index++){const y=145-index*30,value=floor+range*index/4;html+='<line x1="55" y1="'+y+'" x2="735" y2="'+y+'" stroke="#e7e7e7"/><text x="44" y="'+(y+4)+'" text-anchor="end">'+Math.round(value)+'</text>';}
   for(let year=min;year<=max;year+=2){const x=75+(year-min)/(max-min)*635;html+='<text x="'+x+'" y="174" text-anchor="middle">'+year+'</text>';}
   if(!data.length)html+='<text x="395" y="88" text-anchor="middle">No records in this citation band</text>';
-  data.sort((a,b)=>(b.jif??0)-(a.jif??0)).forEach(paper=>{const x=75+(paper.year-min)/Math.max(1,max-min)*635;const y=145-(paper.citations-floor)/range*120;const label=paper.author+' '+paper.year+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+(Number.isFinite(paper.jif)?colors[paper.organ]:'none')+'" fill-opacity=".60" stroke="#808080" stroke-width="1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
+  data.sort((a,b)=>(b.jif??0)-(a.jif??0)).forEach(paper=>{const x=75+(paper.year-min)/Math.max(1,max-min)*635;const y=145-(paper.citations-floor)/range*120;const category=collectionForPaper(paper);const label=category+' · '+paper.author+' '+paper.year+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+(Number.isFinite(paper.jif)?colors[category]:'none')+'" fill-opacity=".60" stroke="#808080" stroke-width="1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
   $('#'+id).innerHTML=html;
 }
 
@@ -96,22 +103,24 @@ function chartMonthly(id,data){
   for(let index=0;index<=4;index++){const y=145-index*30,value=index*25;html+='<line x1="55" y1="'+y+'" x2="735" y2="'+y+'" stroke="#e7e7e7"/><text x="44" y="'+(y+4)+'" text-anchor="end">'+value+'</text>';}
   for(let year=2025;year<=2026;year++)for(let month=0;month<12;month+=3){const date=Date.UTC(year,month,1);if(date<start||date>end)continue;const x=75+(date-start)/range*635;html+='<text x="'+x+'" y="174" text-anchor="middle">'+monthLabels[month]+' '+String(year).slice(2)+'</text>';}
   if(!data.length)html+='<text x="395" y="88" text-anchor="middle">No dated records since January 2025</text>';
-  data.sort((a,b)=>(b.paper.jif??0)-(a.paper.jif??0)).forEach(({paper,date})=>{const x=75+(date-start)/range*635;const y=145-paper.citations/100*120;const label=paper.author+' · '+paper.publishedOn+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+(Number.isFinite(paper.jif)?colors[paper.organ]:'none')+'" fill-opacity=".60" stroke="#808080" stroke-width="1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
+  data.sort((a,b)=>(b.paper.jif??0)-(a.paper.jif??0)).forEach(({paper,date})=>{const x=75+(date-start)/range*635;const y=145-paper.citations/100*120;const category=collectionForPaper(paper);const label=category+' · '+paper.author+' · '+paper.publishedOn+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+(Number.isFinite(paper.jif)?colors[category]:'none')+'" fill-opacity=".60" stroke="#808080" stroke-width="1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
   $('#'+id).innerHTML=html;
 }
 
 function renderLegend(){
   $('.legend').innerHTML=collections.map(name=>'<span><i style="background:'+colors[name]+'"></i>'+name+'</span>').join('');
-  $('.chart-panel p.small').textContent='Landmark and Established: publication year. Emerging: publication month from January 2025. Y: citations. Circle area: 2025 Journal Impact Factor. Altmetric Attention Scores are supplied live by Altmetric.com.';
+  $('.chart-panel p.small').textContent='Landmark and Established: publication year. Emerging: publication month from January 2025. Y: citations. Circle area: 2025 Journal Impact Factor. Colors use the atlas collections: organs with more than 20 papers, Pan-cancer, and Others. Altmetric Attention Scores are supplied live by Altmetric.com.';
   $('#chart-low').previousElementSibling.querySelector('span').textContent='<100 citations · monthly from 2025';
   $('#chart-low').setAttribute('aria-label','Emerging papers since 2025, plotted by publication month and citation count');
 }
 
 function renderNavigation(){
-  $('.nav-left').innerHTML='<button class="active" data-organ="All">Overview</button>'+organConfig.map(row=>'<button data-organ="'+esc(row.en)+'">'+esc(row.en)+'</button>').join('');
+  $('.nav-left').innerHTML='<button class="active" data-organ="All">Overview</button>'+collections.map(name=>'<button data-organ="'+esc(name)+'">'+esc(name)+'</button>').join('');
   const map=$('.body-map');
   map.querySelectorAll('.organ-dot').forEach(node=>node.remove());
-  organConfig.filter(row=>row.hotspot).forEach(row=>{const node=document.createElement('button');node.className='organ-dot';node.dataset.organ=row.en;node.setAttribute('aria-label','Explore '+row.en+' research');node.style.left=row.hotspot.x+'%';node.style.top=row.hotspot.y+'%';node.style.background=row.color||colors[row.en];node.innerHTML='<span>'+esc(row.en)+'</span>';map.append(node);});
+  atlasOrganRows.filter(row=>row.hotspot).forEach(row=>{const count=organPaperCounts[row.id]||0;const node=document.createElement('button');node.className='organ-dot';node.dataset.organ=row.en;node.setAttribute('aria-label','Explore '+row.en+' research, '+count+' papers');node.style.left=row.hotspot.x+'%';node.style.top=row.hotspot.y+'%';node.style.background=colors[row.en];node.innerHTML='<span>'+esc(row.en)+'<small>'+count+' papers</small></span>';map.append(node);});
+  $('#atlas-count').textContent=String(atlasOrganRows.length).padStart(2,'0')+' ORGANS · 02 GROUPED';
+  $('#atlas-groups').innerHTML=[PAN_CANCER,OTHERS].map(name=>'<button data-organ="'+name+'"><span>'+(name===PAN_CANCER?'CROSS-ORGAN EVIDENCE':'LOWER-VOLUME ORGANS')+'</span><b>'+name+'</b><small>'+collectionCount(name)+' papers</small></button>').join('');
 }
 
 function renderJournalMetrics(){
@@ -124,8 +133,8 @@ function renderJournalMetrics(){
 function renderOrganTaxa(){
   const panel=$('.reading-note');
   if(organ==='All'){
-    const counts=collections.map(name=>[name,all.filter(paper=>paper.organ===name).length]).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
-    panel.innerHTML='<span class="eyebrow">COLLECTION COVERAGE</span><h3>Papers,<br>by organ.</h3><p class="small">Counts use each paper’s primary organ assignment. Select an organ to see its named bacterial taxa.</p><ul class="organ-counts">'+counts.map(([name,count])=>'<li><button data-organ="'+esc(name)+'"><span>'+esc(name)+'</span><b>'+count+'</b><small>'+(count===1?'paper':'papers')+'</small></button></li>').join('')+'</ul>';
+    const counts=collections.map(name=>[name,collectionCount(name)]);
+    panel.innerHTML='<span class="eyebrow">COLLECTION COVERAGE</span><h3>Papers,<br>by organ.</h3><p class="small">Organs with more than 20 papers have individual collections. Pan-cancer remains separate; lower-volume organs are grouped as Others.</p><ul class="organ-counts">'+counts.map(([name,count])=>'<li><button data-organ="'+esc(name)+'"><span>'+esc(name)+'</span><b>'+count+'</b><small>'+(count===1?'paper':'papers')+'</small></button></li>').join('')+'</ul>';
     return;
   }
   const genusCounts={},speciesCounts={};
@@ -137,7 +146,9 @@ function renderOrganTaxa(){
   });
   const sorted=counts=>Object.entries(counts).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
   const rankList=(title,rows)=>'<section class="taxa-rank"><h4>'+title+' <span>'+rows.length+' named taxa</span></h4>'+(!rows.length?'<p class="small">No '+title.toLowerCase()+' annotation yet.</p>':'<ul>'+rows.map(([taxon,count])=>'<li><i>'+esc(taxon)+'</i><b>'+count+'</b><small>'+(count===1?'paper':'papers')+'</small></li>').join('')+'</ul>')+'</section>';
-  panel.innerHTML='<span class="eyebrow">'+esc(organ.toUpperCase())+' BACTERIA</span><h3>Named taxa.</h3><p class="small">Genus counts aggregate explicit genus and species mentions once per paper. Species counts retain explicitly named species or strains.</p><div class="taxa-groups">'+rankList('Genus level',sorted(genusCounts))+rankList('Species level',sorted(speciesCounts))+'</div>';
+  const othersBreakdown=organ===OTHERS?Object.entries(all.filter(paper=>collectionForPaper(paper)===OTHERS).reduce((counts,paper)=>{counts[paper.organ]=(counts[paper.organ]||0)+1;return counts;},{})).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])):[];
+  const members=organ===OTHERS?'<details class="others-members"><summary>'+othersBreakdown.length+' organ collections in Others</summary><ul>'+othersBreakdown.map(([name,count])=>'<li><span>'+esc(name)+'</span><b>'+count+'</b></li>').join('')+'</ul></details>':'';
+  panel.innerHTML='<span class="eyebrow">'+esc((organ===OTHERS?'OTHER ORGANS':organ).toUpperCase())+' BACTERIA</span><h3>Named taxa.</h3><p class="small">Genus counts aggregate explicit genus and species mentions once per paper. Species counts retain explicitly named species or strains.</p>'+members+'<div class="taxa-groups">'+rankList('Genus level',sorted(genusCounts))+rankList('Species level',sorted(speciesCounts))+'</div>';
 }
 
 function addAltmetricBadges(){
