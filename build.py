@@ -68,6 +68,8 @@ for path in sorted(cards_root.rglob("*.md")):
     if loaded is None:
         continue
     metadata, body = loaded
+    if str(metadata.get("screening_status") or "").casefold() == "excluded":
+        continue
     folder_organ = path.parent.name
     journal = str(metadata.get("journal") or "").strip()
     journal_metric = journal_by_name.get(norm_journal(journal))
@@ -141,6 +143,7 @@ for path in sorted(cards_root.rglob("*.md")):
         "jifSource": journal_metric["source_url"],
         "jifStatus": journal_metric["status"],
         "selectionReason": str(metadata.get("selection_reason") or ""),
+        "screeningStatus": str(metadata.get("screening_status") or "included"),
         "inclusionReason": section(body, "为什么入选") or section(body, "相关性"),
     })
 
