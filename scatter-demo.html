@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Scatter plot studies — IntratumoralBac</title>
+  <link rel="stylesheet" href="scatter-demo.css">
+</head>
+<body>
+  <header>
+    <a href="./" class="brand">Intratumoral<span>Bac</span><i>.</i></a>
+    <div><b>SCATTER PLOT STUDIES</b><span>Same papers. Same axes. Six visual treatments.</span></div>
+  </header>
+  <main>
+    <section class="intro">
+      <p class="kicker">DESIGN COMPARISON · EMERGING PAPERS</p>
+      <h1>Which points feel<br><em>clear and credible?</em></h1>
+      <p>Each panel uses papers published since January 2025 with fewer than 100 citations. Point area follows 2025 JIF. Hover a mark to identify the paper.</p>
+    </section>
+    <section class="demo-grid" id="demo-grid"></section>
+    <section class="notes">
+      <h2>What changes between versions</h2>
+      <div><b>Opacity</b><p>Lower opacity reveals overlap but can make isolated papers look weak.</p></div>
+      <div><b>Size</b><p>Smaller marks reduce crowding but compress the visible JIF differences.</p></div>
+      <div><b>Shape</b><p>Shapes can carry a second variable, although too many shapes increase reading effort.</p></div>
+    </section>
+  </main>
+  <div class="tooltip" id="tooltip" hidden></div>
+  <script src="data.js"></script>
+  <script src="scatter-demo.js"></script>
+</body>
+</html>

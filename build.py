@@ -267,7 +267,7 @@ shutil.copy2(root.parent / "素材库" / "人体器官导航_乳腺投影_v4.png
 
 out = root / "dist"
 out.mkdir(exist_ok=True)
-for name in ["index.html", "latest.html", "style.css", "homepage-study.css", "app.js", "homepage-study.js", "reading-set.js", "latest.js", "data.js", "journal-metrics.js", "organ-config.js", "landmark-config.js", "landmark-config.json", "data-manifest.json", "journal_impact_factors_2025.json"]:
+for name in ["index.html", "latest.html", "scatter-demo.html", "style.css", "scatter-demo.css", "homepage-study.css", "app.js", "scatter-demo.js", "homepage-study.js", "reading-set.js", "latest.js", "data.js", "journal-metrics.js", "organ-config.js", "landmark-config.js", "landmark-config.json", "data-manifest.json", "journal_impact_factors_2025.json"]:
     shutil.copy2(root / name, out / name)
 shutil.copytree(root / "assets", out / "assets", dirs_exist_ok=True)
 print(json.dumps(manifest, ensure_ascii=False))
