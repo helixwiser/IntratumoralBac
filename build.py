@@ -135,7 +135,31 @@ for path in sorted(cards_root.rglob("*.md")):
     doi = "" if metadata.get("doi") in (None, "null") else str(metadata.get("doi") or "").strip()
     title = str(metadata.get("title") or "")
     title_key = re.sub(r"\s+", " ", title).strip().casefold()
-    abstract_record = abstract_by_pmid.get(pmid) or abstract_by_doi.get(normalized_doi(doi)) or abstract_by_title.get(title_key)
+    abstract_status = str(metadata.get("abstract_status") or "").strip().casefold()
+    card_abstract = re.split(
+        r"^### Abstract provenance\s*$",
+        section(body, "Original abstract"),
+        maxsplit=1,
+        flags=re.M,
+    )[0].strip()
+    if abstract_status == "available":
+        if not card_abstract:
+            raise ValueError(f"Card marks abstract available but has no original abstract: {paper_id}")
+        abstract_record = {
+            "text": clean_abstract(card_abstract),
+            "provider": str(metadata.get("abstract_source") or "").strip(),
+            "url": str(metadata.get("abstract_source_url") or "").strip(),
+        }
+        if not abstract_record["provider"]:
+            raise ValueError(f"Card abstract has no source: {paper_id}")
+    elif abstract_status == "unavailable":
+        if card_abstract:
+            raise ValueError(f"Card marks abstract unavailable but contains abstract text: {paper_id}")
+        abstract_record = None
+    else:
+        # Migration fallback for legacy cards only. New and updated cards must carry
+        # an explicit status so the card remains the canonical abstract record.
+        abstract_record = abstract_by_pmid.get(pmid) or abstract_by_doi.get(normalized_doi(doi)) or abstract_by_title.get(title_key)
     plot_date = metadata.get("plot_date") or oa_metric.get("publication_date") or legacy_dates.get(paper_id)
     citation_value = oa_metric.get("value_numeric") if oa_metric.get("retrieval_status") == "ok" else integer_or_none(metadata.get("citation_count"))
     papers.append({
