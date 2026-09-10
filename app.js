@@ -18,6 +18,17 @@ const pointRadius=paper=>Number.isFinite(paper.jif)?2*Math.sqrt(paper.jif):4;
 const button=paper=>'<button class="paper-open" data-id="'+paper.id+'">'+esc(short(paper))+'</button>';
 const attention=paper=>(Number.isFinite(paper.articleAccesses)?'<a class="access-count" href="'+esc(paper.articleAccessesSource)+'" target="_blank" rel="noopener"><b>'+paper.articleAccesses.toLocaleString('en-US')+'</b><span>Article Accesses</span></a>':'')+'<span class="citation-count"><b>'+citations(paper)+'</b><span>Citations</span></span>';
 const statusBadge=paper=>paper.publicationStatus==='retracted'?'<span class="status-badge retracted">RETRACTED</span>':paper.publicationVersion==='preprint'?'<span class="status-badge">PREPRINT</span>':'';
+const taxonLabel=taxon=>String(taxon||'').replaceAll('_',' ').replace(/\s+/g,' ').trim();
+const taxonRanks=taxon=>{
+  const label=taxonLabel(taxon);
+  const enterotoxigenic=label.match(/^Enterotoxigenic\s+([A-Z][a-z]+)\s+([a-z][a-z-]+)/);
+  if(enterotoxigenic)return {genus:enterotoxigenic[1],species:label};
+  if(label==='Escherichia Shigella')return {genus:'Escherichia/Shigella group',species:null};
+  const species=label.match(/^([A-Z][a-z]+)\s+((?:[a-z][a-z-]+)|sp\.?)\b/);
+  if(species)return {genus:species[1],species:label};
+  if(/^[A-Z][a-z]+$/.test(label)&&!/(aceae|ales|ota)$/.test(label))return {genus:label,species:null};
+  return {genus:null,species:null};
+};
 const preciseMonthlyDate=paper=>{
   if(!['month','day'].includes(paper.datePrecision))return null;
   const match=String(paper.publishedOn||'').match(/^(\d{4})-(\d{2})(?:-(\d{2}))?$/);
@@ -61,6 +72,7 @@ function render(){
   let plotCoverage=$('#plot-coverage');
   if(!plotCoverage){plotCoverage=document.createElement('p');plotCoverage.id='plot-coverage';plotCoverage.className='small';$('.chart-panel').append(plotCoverage);}
   plotCoverage.textContent=cited.length+' papers plotted across citation bands; '+monthly.length+' recent papers appear in the monthly Emerging panel. '+(lowCited.length-monthly.length)+' earlier or year-only low-citation records remain in the collection table.';
+  renderOrganTaxa();
 }
 
 function chart(id,data,floor,ceiling){
@@ -110,8 +122,22 @@ function renderJournalMetrics(){
 }
 
 function renderOrganTaxa(){
-  const groups=collections.map(name=>{const counts={};all.filter(paper=>paper.organ===name).forEach(paper=>(paper.taxa||[]).forEach(taxon=>counts[taxon]=(counts[taxon]||0)+1));const taxa=Object.entries(counts).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));return '<section class="taxa-group"><h4>'+name+' <span>'+taxa.length+' named taxa</span></h4>'+(!taxa.length?'<p class="small">No taxon-level annotation yet.</p>':'<ul>'+taxa.map(([taxon,count])=>'<li><i>'+esc(taxon.replaceAll('_',' '))+'</i><b>'+count+'</b><small>papers</small></li>').join('')+'</ul>')+'</section>';}).join('');
-  $('.reading-note').innerHTML='<span class="eyebrow">BACTERIA STUDIED</span><h3>Named taxa,<br>by organ.</h3><p class="small">Counts reflect papers that explicitly name a bacterial taxon in the current card.</p><div class="taxa-groups">'+groups+'</div>';
+  const panel=$('.reading-note');
+  if(organ==='All'){
+    const counts=collections.map(name=>[name,all.filter(paper=>paper.organ===name).length]).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
+    panel.innerHTML='<span class="eyebrow">COLLECTION COVERAGE</span><h3>Papers,<br>by organ.</h3><p class="small">Counts use each paper’s primary organ assignment. Select an organ to see its named bacterial taxa.</p><ul class="organ-counts">'+counts.map(([name,count])=>'<li><button data-organ="'+esc(name)+'"><span>'+esc(name)+'</span><b>'+count+'</b><small>'+(count===1?'paper':'papers')+'</small></button></li>').join('')+'</ul>';
+    return;
+  }
+  const genusCounts={},speciesCounts={};
+  selected().forEach(paper=>{
+    const paperGenera=new Set(),paperSpecies=new Set();
+    (paper.taxa||[]).forEach(taxon=>{const ranks=taxonRanks(taxon);if(ranks.genus)paperGenera.add(ranks.genus);if(ranks.species)paperSpecies.add(ranks.species);});
+    paperGenera.forEach(name=>genusCounts[name]=(genusCounts[name]||0)+1);
+    paperSpecies.forEach(name=>speciesCounts[name]=(speciesCounts[name]||0)+1);
+  });
+  const sorted=counts=>Object.entries(counts).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
+  const rankList=(title,rows)=>'<section class="taxa-rank"><h4>'+title+' <span>'+rows.length+' named taxa</span></h4>'+(!rows.length?'<p class="small">No '+title.toLowerCase()+' annotation yet.</p>':'<ul>'+rows.map(([taxon,count])=>'<li><i>'+esc(taxon)+'</i><b>'+count+'</b><small>'+(count===1?'paper':'papers')+'</small></li>').join('')+'</ul>')+'</section>';
+  panel.innerHTML='<span class="eyebrow">'+esc(organ.toUpperCase())+' BACTERIA</span><h3>Named taxa.</h3><p class="small">Genus counts aggregate explicit genus and species mentions once per paper. Species counts retain explicitly named species or strains.</p><div class="taxa-groups">'+rankList('Genus level',sorted(genusCounts))+rankList('Species level',sorted(speciesCounts))+'</div>';
 }
 
 function addAltmetricBadges(){
@@ -129,5 +155,4 @@ renderNavigation();
 renderLegend();
 render();
 renderJournalMetrics();
-renderOrganTaxa();
 addAltmetricBadges();
