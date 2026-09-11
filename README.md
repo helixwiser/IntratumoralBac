@@ -1,14 +1,38 @@
-# IntratumoralBac 单页 demo
+# IntratumoralBac
 
-入口：index.html。可直接在浏览器打开；所有内容和器官素材均为本地文件，无需安装依赖。
+IntratumoralBac is an interactive research atlas for exploring the intratumoral microbiome literature across organs, publication time, citations, journals, named taxa, and abstract-level research patterns.
 
-运行 build.py 从项目的乳腺、肝脏、肺文献卡片生成 data.js 与 dist/ 静态发布目录。缺失引用量保持空值，技术严谨性与概念创新性显示为待审阅。
+## Website
 
-参考 Science 首页的居中刊头、三栏比例、红色栏目文字、细线分隔与最新动态列表；字体使用 Georgia / 中文宋体及系统无衬线字体。没有使用 Science 品牌或文章图片。
+The atlas provides:
 
-当前首页访问遇到人机验证，布局参考的是北卡罗来纳州立大学实验室保留的首页截图（2024年12月）：
-https://jieyin.wordpress.ncsu.edu/2024/12/04/manta-ray-swimmer-is-highlighted-on-the-frontpages-of-science-and-science-advances/
+- organ-specific literature collections;
+- publication year, citation, attention, and journal-level views;
+- curated research-focus papers;
+- an abstract explorer with paper-similarity search;
+- abstract-level research-action statistics and source sentences.
 
-本页是现有卡片的视觉预览，未重新核验文献。年份及引用量采用卡片存量数据，不代表本次重新检索结果。
+The similarity explorer returns every paper with cosine similarity strictly greater than 0.7 and includes the selected source paper. Automated labels and action matches are discovery aids. They are not full-text assessments of technical rigor, causality, or evidence quality.
 
-Sites 初始化工具在本环境因依赖解析失败，采用零依赖静态页面实现。
+## Data status
+
+The current release is a literature snapshot rather than a completed systematic review. Citation counts and publication metadata reflect their recorded retrieval dates. Journal Impact Factor is a journal-level contextual metric and must not be interpreted as an assessment of an individual paper.
+
+## Local use
+
+Open `index.html` in a browser. The site is static and has no runtime dependencies.
+
+To validate the Abstract Explorer search behavior:
+
+```bash
+cd abstract-clusters
+node test-search-mode.cjs
+```
+
+## GitHub Pages
+
+Pushes to `main` publish the static atlas through the included GitHub Actions workflow. The workflow stages only files required by the public website.
+
+## Attribution
+
+Bibliographic metadata remains attributable to its original data providers and publishers. Article titles and abstracts remain the property of their respective rights holders where applicable. External metrics and badges are subject to their providers' terms.
