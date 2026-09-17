@@ -7,6 +7,7 @@
 
 /* Compact sidebar cards: full titles remain available on hover and in the weekly list. */
 #recent .weekly-latest li{display:block;padding:12px 0;border-color:#ddd}
+#recent .weekly-latest{grid-column:1/-1;width:100%;min-width:0}
 #recent .weekly-latest li:first-child{border-top:0;padding-top:0}
 #recent .weekly-latest h4{font:16px/1.4 Georgia,serif;margin:7px 0 6px}
 #recent .weekly-latest h4 a{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
@@ -16,6 +17,7 @@
 #recent .weekly-latest .weekly-latest-journal{min-height:0;margin:0;font-size:11px;line-height:1.5;color:#666;text-transform:capitalize}
 .weekly-context{margin:8px 0 18px}.weekly-status.published{border-color:#aaa;color:#555}
 @media(max-width:760px){#recent .weekly-latest h4 a{-webkit-line-clamp:unset}}
+@media(min-width:741px) and (max-width:1120px){#recent .weekly-latest{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px}}
 
 .weekly-stats .weekly-new-count{color:#a92428;font-weight:700}
 

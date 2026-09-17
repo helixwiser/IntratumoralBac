@@ -49,6 +49,8 @@ const assert=require('node:assert/strict');
   await page.locator('#weekly-update').screenshot({path:process.env.TEMP+'/weekly-desktop.png'});
   await page.setViewportSize({width:390,height:844});
   await page.locator('#weekly-update').scrollIntoViewIfNeeded();
+  const latestWidths=await page.evaluate(()=>({panel:document.querySelector('.front>aside').getBoundingClientRect().width,list:document.querySelector('#recent .weekly-latest').getBoundingClientRect().width}));
+  assert(latestWidths.list>=latestWidths.panel-1,'Latest research must fill the mobile column');
   const overflow=await page.locator('#weekly-update').evaluate(el=>el.scrollWidth>el.clientWidth);
   assert.equal(overflow,false);
   await page.locator('#weekly-update').screenshot({path:process.env.TEMP+'/weekly-mobile.png'});
