@@ -40,3 +40,11 @@ Pushes to `main` publish the static atlas through the included GitHub Actions wo
 ## Attribution
 
 Bibliographic metadata remains attributable to its original data providers and publishers. Article titles and abstracts remain the property of their respective rights holders where applicable. External metrics and badges are subject to their providers' terms.
+
+## Weekly Update
+
+The homepage weekly section reads `weekly-data.js`, generated from the parent vault’s weekly references and canonical organ cards. Run `python build.py --weekly-only` to refresh this section independently of the core collection snapshot; a full build also exports weekly data. No vault content is modified.
+
+Counts represent unique newly collected paper IDs (including late discoveries and historical backfill); updates to existing papers are counted separately. JIF ranking excludes companion comments from the five featured slots, while the full weekly list retains them. The ranking uses 2025 metrics from cards, with paper ID as a stable tie-breaker. Pan-cancer / multi-organ records are shown separately from the largest specific-organ increase. Publication labels use `publication_stage`: `journal_online` → Online, `journal_issue` → Published, otherwise Unverified. Status is a captured-record assessment, not a live publisher check.
+
+Preview with a local HTTP server on port 8765. Run `node scripts/test-weekly.cjs` with Playwright available (defaults to Edge; override `PLAYWRIGHT_CHANNEL`) for desktop/mobile, deduplication, ranking, navigation and empty-state checks. `scripts/stage-pages.mjs` includes all three weekly assets.

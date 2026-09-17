@@ -5,6 +5,9 @@ const root = resolve(import.meta.dirname, "..");
 const output = resolve(root, "_site");
 const files = [
   "index.html",
+  "weekly.css",
+  "weekly.js",
+  "weekly-data.js",
   "latest.html",
   "scatter-demo.html",
   "halo-demo.html",

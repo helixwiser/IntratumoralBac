@@ -1,4 +1,4 @@
-const SNAPSHOT_DATE='2026-09-09';
+const SNAPSHOT_DATE=window.DATA_BUILT_ON||'2026-09-09';
 const papers=window.PAPERS||[];
 const $=selector=>document.querySelector(selector);
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));

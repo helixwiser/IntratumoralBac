@@ -1,4 +1,4 @@
-const SNAPSHOT_DATE='2026-09-09';
+const SNAPSHOT_DATE=window.DATA_BUILT_ON||'2026-09-09';
 const PLOT_START_YEAR=2010;
 const organConfig=window.ORGAN_CONFIG||[];
 const landmarkConfig=window.LANDMARK_CONFIG||{};
@@ -76,6 +76,20 @@ const publicationDateLabel=paper=>{
   if(!match[3])return new Intl.DateTimeFormat('en',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(timestamp));
   return new Intl.DateTimeFormat('en',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(timestamp));
 };
+const issueDateLabel=value=>{
+  const match=String(value||'').match(/^(\d{4})-([A-Za-z]{3})(?:-(\d{1,2}))?$/);
+  if(!match)return String(value||'');
+  const month=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(match[2]);
+  return month<0?String(value):match[1]+'-'+String(month+1).padStart(2,'0')+(match[3]?'-'+match[3].padStart(2,'0'):'');
+};
+const publicationTimeline=paper=>{
+  const lines=[];
+  if(paper.publishedOnline)lines.push('<span class="paper-date-line"><b>Online</b> '+esc(paper.publishedOnline)+'</span>');
+  if(paper.publicationStage==='journal_issue'&&paper.publishedIssue)lines.push('<span class="paper-date-line"><b>Published</b> '+esc(issueDateLabel(paper.publishedIssue))+'</span>');
+  if(!lines.length&&paper.publishedOn&&!/^\d{4}$/.test(paper.publishedOn))lines.push('<span class="paper-date-line"><b>Record date</b> '+esc(paper.publishedOn)+'</span>');
+  if(!lines.length)lines.push('<span class="paper-date-line"><b>Year</b> '+esc(paper.year)+'</span>');
+  return lines.join('<br>');
+};
 
 function detail(id,context='collection'){
   const paper=all.find(item=>item.id===id);
@@ -83,7 +97,7 @@ function detail(id,context='collection'){
   const abstractHtml=abstractText?'<section class="paper-abstract"><span class="eyebrow">ABSTRACT</span><p>'+esc(abstractText)+'</p>'+(paper.abstractSourceUrl?'<p class="small">Source: <a href="'+esc(paper.abstractSourceUrl)+'" target="_blank" rel="noopener">'+esc(paper.abstractSource||'Original record')+' ↗</a></p>':'')+'</section>':'<section class="paper-abstract"><span class="eyebrow">ABSTRACT</span><p class="small">Original abstract unavailable from the indexed sources currently recorded for this paper.</p></section>';
   const citationDate=paper.citationCheckedOn||'2026-09-09';
   const assessment=context==='focus'&&hasVerifiedFullTextReview(paper)?'<section class="verified-assessment"><hr><p><b>Technical rigor</b>　'+esc(paper.technicalRigor)+'</p><p><b>Technical innovation</b>　'+esc(paper.technicalInnovation)+'</p><p><b>Conceptual novelty</b>　'+esc(paper.conceptualNovelty)+'</p><p><b>Key limitation</b>　'+esc(paper.keyLimitation)+'</p></section>':'';
-  $('#detail').innerHTML='<span class="eyebrow">'+esc(paper.organ)+' / '+paper.year+' / '+esc(paper.id)+'</span>'+statusBadge(paper)+'<h2>'+esc(paper.title)+'</h2><p class="meta">'+esc(paper.author)+' · '+esc(paper.journal)+' · '+esc(paper.scopeClass||'scope unavailable')+' · '+esc(paper.publicationVersion||'version unavailable')+'</p><p class="publication-date"><b>Published</b> '+esc(publicationDateLabel(paper))+'</p>'+abstractHtml+(paper.publicationStatus==='retracted'?'<p class="retraction-note"><b>Retraction notice:</b> This record is retained for historical and methodological context. Its original conclusions must not be treated as valid evidence.'+(paper.retractionDoi?' <a href="https://doi.org/'+encodeURIComponent(paper.retractionDoi)+'" target="_blank" rel="noopener">Notice ↗</a>':'')+'</p>':'')+'<p class="small">Citations: '+citations(paper)+' · OpenAlex, checked '+esc(citationDate)+'</p>'+(paper.doi?'<div class="detail-altmetric"><span class="small">Altmetric Attention Score</span><div class="altmetric-embed" data-doi="'+esc(paper.doi)+'" data-badge-type="medium-donut" data-hide-no-mentions="true"></div></div>':'<p class="small">Altmetric Attention Score: '+esc(altmetricLabel(paper))+'</p>')+'<p class="small">2025 Journal Impact Factor: '+jifLabel(paper)+' · '+(paper.jifSource?'<a href="'+esc(paper.jifSource)+'" target="_blank" rel="noopener">Source ↗</a>':'Source unavailable')+'</p>'+assessment+(paper.doi?'<a class="doi" target="_blank" rel="noopener" href="https://doi.org/'+encodeURIComponent(paper.doi)+'">Read the paper ↗</a>':'');
+  $('#detail').innerHTML='<span class="eyebrow">'+esc(paper.organ)+' / '+paper.year+' / '+esc(paper.id)+'</span>'+statusBadge(paper)+'<h2>'+esc(paper.title)+'</h2><p class="meta">'+esc(paper.author)+' · '+esc(paper.journal)+' · '+esc(paper.scopeClass||'scope unavailable')+' · '+esc(paper.publicationVersion||'version unavailable')+'</p><p class="publication-date">'+publicationTimeline(paper)+'</p>'+abstractHtml+(paper.publicationStatus==='retracted'?'<p class="retraction-note"><b>Retraction notice:</b> This record is retained for historical and methodological context. Its original conclusions must not be treated as valid evidence.'+(paper.retractionDoi?' <a href="https://doi.org/'+encodeURIComponent(paper.retractionDoi)+'" target="_blank" rel="noopener">Notice ↗</a>':'')+'</p>':'')+'<p class="small">Citations: '+citations(paper)+' · OpenAlex, checked '+esc(citationDate)+'</p>'+(paper.doi?'<div class="detail-altmetric"><span class="small">Altmetric Attention Score</span><div class="altmetric-embed" data-doi="'+esc(paper.doi)+'" data-badge-type="medium-donut" data-hide-no-mentions="true"></div></div>':'<p class="small">Altmetric Attention Score: '+esc(altmetricLabel(paper))+'</p>')+'<p class="small">2025 Journal Impact Factor: '+jifLabel(paper)+' · '+(paper.jifSource?'<a href="'+esc(paper.jifSource)+'" target="_blank" rel="noopener">Source ↗</a>':'Source unavailable')+'</p>'+assessment+(paper.doi?'<a class="doi" target="_blank" rel="noopener" href="https://doi.org/'+encodeURIComponent(paper.doi)+'">Read the paper ↗</a>':'');
   $('#paper-dialog').showModal();
   setTimeout(()=>window._altmetric_embed_init&&window._altmetric_embed_init(),0);
 }
@@ -94,8 +108,10 @@ function render(){
   const chronologicalPapers=selected().sort(dateOrder);
   const papers=[...chronologicalPapers].sort(paperSort==='citations'?(a,b)=>descending(p=>p.citations,a,b):paperSort==='attention'?(a,b)=>descending(attentionScore,a,b):dateOrder);
   const cited=papers.filter(paper=>Number.isFinite(paper.citations));
+  const citationPending=papers.filter(paper=>!Number.isFinite(paper.citations));
   const plottedByYear=cited.filter(paper=>paper.year>=PLOT_START_YEAR);
   $('#inventory').textContent=all.length+' records · '+totalOrganCount+' organs in total';
+  $('#collection-record-count').textContent=all.length;
   const fullTextCount=all.filter(hasVerifiedFullTextReview).length;
   $('.editor-note .small').textContent=fullTextCount?fullTextCount+' verified full-text assessments available.':'Verified full-text assessments will appear here.';
   $('#selection-label').textContent=(organ==='All'?'All collections':organ)+' · '+papers.length+' papers';
@@ -114,19 +130,19 @@ function render(){
   $('#focus').innerHTML=focus.length
     ? focus.map(paper=>'<article class="focus-item"><span class="eyebrow">'+esc(paper.organ)+' · '+esc(paper.journal)+'</span><h3>'+button(paper,'focus')+'</h3><p class="summary">'+esc(focusCopy(paper)||'Explore the study design and its central research question.')+'</p><span class="meta">'+esc(paper.author)+' / '+paper.year+'<br>Citations: '+citations(paper)+(hasVerifiedFullTextReview(paper)?' · Full-text review available':'')+'</span></article>').join('')
     : '<p class="focus-empty">No papers currently meet the landmark selection criteria for this collection.</p>';
-  $('#recent').innerHTML=chronologicalPapers.slice(0,6).map(paper=>'<article class="recent-item"><div class="meta">'+paper.year+' · '+esc(paper.organ)+' / '+esc(paper.author)+'</div><h3>'+button(paper)+'</h3></article>').join('');
-  $('#papers').innerHTML=papers.slice(0,limit).map(paper=>'<tr><td>'+paper.year+'<br><span class="small">'+esc(paper.organ)+'</span></td><td>'+statusBadge(paper)+button(paper)+'</td><td>'+esc(paper.journal)+'<br><span class="small">2025 JIF: '+jifLabel(paper)+'</span></td><td>'+metricCell(citations(paper),'Citations')+'</td><td class="attention-cell">'+metricCell(attentionLabel(paper),'Attention')+'</td></tr>').join('');
+  if (!window.WEEKLY_UPDATES?.weeks?.length) $('#recent').innerHTML=chronologicalPapers.slice(0,6).map(paper=>'<article class="recent-item"><div class="meta">'+paper.year+' · '+esc(paper.organ)+' / '+esc(paper.author)+'</div><h3>'+button(paper)+'</h3></article>').join('');
+  $('#papers').innerHTML=papers.slice(0,limit).map(paper=>'<tr><td>'+publicationTimeline(paper)+'<br><span class="small">'+esc(paper.organ)+'</span></td><td>'+statusBadge(paper)+button(paper)+'</td><td>'+esc(paper.journal)+'<br><span class="small">2025 JIF: '+jifLabel(paper)+'</span></td><td>'+metricCell(citations(paper),'Citations')+'</td><td class="attention-cell">'+metricCell(attentionLabel(paper),'Attention')+'</td></tr>').join('');
   $('#more').hidden=limit>=papers.length;
   chart('chart-high',plottedByYear.filter(paper=>paper.citations>500),500,Math.max(600,Math.ceil(Math.max(...plottedByYear.filter(paper=>paper.citations>500).map(paper=>paper.citations),500)/100)*100));
   chart('chart-mid',plottedByYear.filter(paper=>paper.citations>=100&&paper.citations<=500),100,500);
-  chart('chart-low',cited.filter(paper=>paper.citations<100),0,100);
+  chart('chart-low',[...cited.filter(paper=>paper.citations<100),...citationPending],0,100);
   const lowCited=cited.filter(paper=>paper.citations<100);
-  const monthly=lowCited.filter(paper=>{const date=preciseMonthlyDate(paper);return date!==null&&date>=Date.UTC(2025,0,1)&&date<=Date.parse(SNAPSHOT_DATE+'T00:00:00Z');});
+  const monthly=[...lowCited,...citationPending].filter(paper=>{const date=preciseMonthlyDate(paper);return date!==null&&date>=Date.UTC(2025,0,1)&&date<=Date.parse(SNAPSHOT_DATE+'T00:00:00Z');});
   let plotCoverage=$('#plot-coverage');
   if(!plotCoverage){plotCoverage=document.createElement('p');plotCoverage.id='plot-coverage';plotCoverage.className='small';$('.chart-panel').append(plotCoverage);}
   const annualCount=plottedByYear.filter(paper=>paper.citations>=100).length;
   const pre2010Count=cited.filter(paper=>paper.year<PLOT_START_YEAR).length;
-  plotCoverage.textContent=(annualCount+monthly.length)+' papers shown: '+annualCount+' established or landmark papers since 2010, and '+monthly.length+' recent papers in the monthly Emerging panel. '+pre2010Count+' cited papers published before 2010 remain in the collection table.';
+  plotCoverage.textContent=(annualCount+monthly.length)+' papers shown, including '+monthly.filter(paper=>!Number.isFinite(paper.citations)).length+' with citations pending. '+pre2010Count+' cited papers published before 2010 remain in the collection table.';
   renderOrganTaxa();
   renderLegend();
 }
@@ -152,16 +168,16 @@ function chartMonthly(id,data){
   for(let index=0;index<=4;index++){const y=145-index*30,value=index*25;html+='<line x1="55" y1="'+y+'" x2="735" y2="'+y+'" stroke="#ececec"/><text x="44" y="'+(y+4)+'" text-anchor="end">'+value+'</text>';}
   for(let year=2025;year<=2026;year++)for(let month=0;month<12;month+=3){const date=Date.UTC(year,month,1);if(date<start||date>end)continue;const x=75+(date-start)/range*635;html+='<text x="'+x+'" y="174" text-anchor="middle">'+monthLabels[month]+' '+String(year).slice(2)+'</text>';}
   if(!data.length)html+='<text x="395" y="88" text-anchor="middle">No dated records since January 2025</text>';
-  data.sort((a,b)=>pointRadius(a.paper)-pointRadius(b.paper)).forEach(({paper,date})=>{const x=75+(date-start)/range*635;const y=145-paper.citations/100*120;const category=collectionForPaper(paper);const label=category+' · '+paper.author+' · '+paper.publishedOn+' · '+paper.citations+' citations · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" data-context="collection" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+jifFill(paper)+'" fill-opacity="1" stroke="#202020" stroke-width="1.1" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
+  data.sort((a,b)=>pointRadius(a.paper)-pointRadius(b.paper)).forEach(({paper,date})=>{const x=75+(date-start)/range*635;const pending=!Number.isFinite(paper.citations);const y=pending?157:145-paper.citations/100*120;const category=collectionForPaper(paper);const label=category+' · '+paper.author+' · '+paper.publishedOn+' · '+(pending?'citations pending':paper.citations+' citations')+' · 2025 JIF: '+jifLabel(paper);html+='<circle class="dot" tabindex="0" role="button" aria-label="'+esc(short(paper)+'; '+label)+'" data-id="'+paper.id+'" data-context="collection" cx="'+x+'" cy="'+y+'" r="'+pointRadius(paper)+'" fill="'+jifFill(paper)+'" fill-opacity="1" stroke="#202020" stroke-width="1.1" stroke-dasharray="'+(pending?'2 2':'none')+'" vector-effect="non-scaling-stroke"><title>'+esc(label)+'</title></circle>';});
   $('#'+id).innerHTML=html;
 }
 
 function renderLegend(){
   $('.legend').innerHTML='<span><i style="background:'+chartInk()+'"></i>'+esc(organ==='All'?'All collections':organ)+'</span><span class="outline-key">○ JIF unavailable</span>';
-  $('.chart-panel p.small').textContent='Landmark and Established: publication year from 2010. Emerging: publication month from January 2025. Y: citations. Circle area: 2025 Journal Impact Factor. Gray: overview; red: selected collection. Higher JIF means a larger, lighter point, drawn above smaller points. Click an overlap to choose a paper. JIF is a journal metric, not a paper-quality score.';
+  $('.chart-panel p.small').textContent='Landmark and Established: publication year from 2010. Emerging: publication month from January 2025. Y: citations; dashed points below zero await citation data. Circle area: 2025 Journal Impact Factor. Gray: overview; red: selected collection. Click an overlap to choose a paper.';
   document.querySelectorAll('.size-legend circle').forEach((circle,i)=>{circle.style.fill=jifFill({jif:[2,10,50][i]});circle.style.stroke='#202020';});
-  $('#chart-low').previousElementSibling.querySelector('span').textContent='<100 citations · monthly from 2025';
-  $('#chart-low').setAttribute('aria-label','Emerging papers since 2025, plotted by publication month and citation count');
+  $('#chart-low').previousElementSibling.querySelector('span').textContent='<100 citations or pending · monthly from 2025';
+  $('#chart-low').setAttribute('aria-label','Emerging papers since 2025, plotted by publication month and citation count; dashed points have citations pending');
 }
 
 function renderNavigation(){

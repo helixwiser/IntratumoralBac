@@ -10,11 +10,17 @@ import re
 import shutil
 
 import yaml
+import sys
+from weekly_build import build_weekly
+
+if '--weekly-only' in sys.argv:
+    build_weekly(Path(__file__).resolve().parent)
+    raise SystemExit(0)
 
 root = Path(__file__).resolve().parent
 project = root.parent
 cards_root = project / "01-文献卡片"
-metric_source = project / "02-更新指标" / "journal_impact_factors_2025.json"
+metric_source = project / "02-更新指标" / "journal_metrics_watchlist_audited_2026-09-17.json"
 date_source = project / "02-更新指标" / "publication_dates_crossref.json"
 openalex_source = project / "02-更新指标" / "latest_openalex_metrics.json"
 attention_source = project / "02-更新指标" / "latest_attention_metrics.json"
@@ -30,7 +36,7 @@ def load_card(path: Path):
     if not match:
         return None
     metadata = yaml.safe_load(match.group(1))
-    if not isinstance(metadata, dict) or not re.fullmatch(r"ITB-\d{6}", str(metadata.get("paper_id") or "")):
+    if not isinstance(metadata, dict) or metadata.get('type') != 'paper' or not re.fullmatch(r"ITB-\d{6}", str(metadata.get("paper_id") or "")):
         return None
     return metadata, raw[match.end():].strip()
 
@@ -71,15 +77,21 @@ def load_jsonl(path: Path):
 
 
 metrics = json.loads(metric_source.read_text(encoding="utf-8-sig"))
+previous_metrics = json.loads((root / "journal_impact_factors_2025.json").read_text(encoding="utf-8-sig"))
 legacy_dates = json.loads(date_source.read_text(encoding="utf-8-sig")).get("dates", {})
 organ_config = json.loads(organ_source.read_text(encoding="utf-8-sig"))
 landmark_config = json.loads(landmark_source.read_text(encoding="utf-8-sig"))
 organ_by_zh = {row["zh"]: row for row in organ_config["organs"]}
 organ_by_id = {row["id"]: row for row in organ_config["organs"]}
+organ_id_aliases = {"pan-cancer": "pan_cancer", "biliary": "biliary_tract", "oral": "oral_cavity", "brain-cns": "cns"}
 def norm_journal(value):
     return re.sub(r"[^a-z0-9]+", "", str(value or "").casefold())
 
 journal_by_name = {norm_journal(row["journal"]): row for row in metrics["journals"]}
+for previous in previous_metrics["journals"]:
+    current = journal_by_name.get(norm_journal(previous["journal"]))
+    if current and previous["jif_2025"] == current["jif_2025"] and previous.get("status") == "verified_publisher":
+        current.update(source_url=previous["source_url"], status="verified_publisher", source_type="publisher")
 openalex_payload = json.loads(openalex_source.read_text(encoding="utf-8-sig")) if openalex_source.exists() else {}
 openalex_metrics = openalex_payload.get("metrics", {})
 attention_metrics = json.loads(attention_source.read_text(encoding="utf-8-sig")).get("metrics", {}) if attention_source.exists() else {}
@@ -120,12 +132,25 @@ for path in sorted(cards_root.rglob("*.md")):
     journal = str(metadata.get("journal") or "").strip()
     journal_metric = journal_by_name.get(norm_journal(journal))
     if journal_metric is None:
-        raise ValueError(f"Journal missing from metric registry: {journal} ({metadata['paper_id']})")
+        value = metadata.get("jif_2025")
+        if metadata.get("jif_year") != 2025 or isinstance(value, bool) or not isinstance(value, (int, float)) or not metadata.get("jif_source"):
+            raise ValueError(f"Journal missing a sourced 2025 JIF: {journal} ({metadata['paper_id']})")
+        journal_metric = {
+            "journal": journal, "jif_2025": value, "metric_year": 2025,
+            "release_year": 2026, "checked_on": str(metadata.get("screened_on") or ""),
+            "source_url": str(metadata["jif_source"]),
+            "status": str(metadata.get("jif_source_status") or "reported_secondary"),
+            "source_type": "institutional JCR reproduction",
+        }
+        metrics["journals"].append(journal_metric)
+        journal_by_name[norm_journal(journal)] = journal_metric
+    elif metadata.get("discovery_batch") == "ITB-UPDATE-20260917T051303Z" and metadata.get("jif_2025") is not None and journal_metric["jif_2025"] != metadata["jif_2025"]:
+        raise ValueError(f"Card/registry JIF mismatch: {journal} ({metadata['paper_id']}): {metadata['jif_2025']} vs {journal_metric['jif_2025']}")
     if not isinstance(journal_metric.get("jif_2025"), (int, float)) or isinstance(journal_metric.get("jif_2025"), bool):
         raise ValueError(f"Active paper has no numeric 2025 JIF: {journal} ({metadata['paper_id']})")
     paper_id = str(metadata["paper_id"])
     organ_ids = metadata.get("organ_ids") if isinstance(metadata.get("organ_ids"), list) else []
-    primary_organ_id = organ_ids[0] if organ_ids else (organ_by_zh.get(folder_organ) or {}).get("id")
+    primary_organ_id = organ_id_aliases.get(organ_ids[0], organ_ids[0]) if organ_ids else (organ_by_zh.get(folder_organ) or {}).get("id")
     if primary_organ_id not in organ_by_id:
         raise ValueError(f"Unregistered organ id: {primary_organ_id} ({path.name})")
     organ_row = organ_by_id[primary_organ_id]
@@ -189,6 +214,7 @@ for path in sorted(cards_root.rglob("*.md")):
         "scopeClass": str(metadata.get("scope_class") or ""),
         "publicationVersion": str(metadata.get("publication_version") or ""),
         "publicationStatus": str(metadata.get("publication_status") or ""),
+        "publicationStage": str(metadata.get("publication_stage") or ""),
         "retractionDoi": str(metadata.get("retraction_doi") or ""),
         "reviewStatus": str(metadata.get("review_status") or ""),
         "contentStatus": str(metadata.get("content_status") or ""),
@@ -239,6 +265,7 @@ landmark_config["paperIds"] = [paper_by_doi[doi]["id"] for doi in landmark_dois]
 counts = Counter(norm_journal(paper["journal"]) for paper in papers)
 for row in metrics["journals"]:
     row["paper_count"] = counts[norm_journal(row["journal"])]
+metrics["journals"] = [row for row in metrics["journals"] if row["paper_count"] > 0]
 
 active_organ_ids = sorted({paper["organId"] for paper in papers})
 web_organs = [row for row in organ_config["organs"] if row["id"] in active_organ_ids]
@@ -257,7 +284,8 @@ manifest = {
     "abstract_missing": sum(not bool(paper["abstract"]) for paper in papers),
 }
 
-(root / "data.js").write_text("window.PAPERS=" + payload + ";\n", encoding="utf-8")
+(root / "data.js").write_text("window.DATA_BUILT_ON=" + json.dumps(manifest["built_on"]) + ";window.PAPERS=" + payload + ";\n", encoding="utf-8")
+(root / "journal_impact_factors_2025.json").write_text(json.dumps(metrics, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 (root / "journal-metrics.js").write_text("window.JOURNAL_METRICS=" + metric_payload + ";\n", encoding="utf-8")
 (root / "organ-config.js").write_text("window.ORGAN_CONFIG=" + json.dumps(web_organs, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8")
 (root / "landmark-config.js").write_text("window.LANDMARK_CONFIG=" + json.dumps(landmark_config, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8")
@@ -266,7 +294,10 @@ manifest = {
 shutil.copy2(project / "03-网站建设" / "素材库" / "人体器官导航_乳腺投影_v4.png", root / "assets" / "organ-map.png")
 
 out = root / "dist"
+build_weekly(root)
 out.mkdir(exist_ok=True)
+for name in ['weekly.css', 'weekly.js', 'weekly-data.js']:
+    shutil.copy2(root / name, out / name)
 for name in ["index.html", "latest.html", "scatter-demo.html", "halo-demo.html", "style.css", "scatter-demo.css", "halo-demo.css", "homepage-study.css", "app.js", "scatter-demo.js", "halo-demo.js", "homepage-study.js", "reading-set.js", "latest.js", "data.js", "journal-metrics.js", "organ-config.js", "landmark-config.js", "landmark-config.json", "data-manifest.json", "journal_impact_factors_2025.json"]:
     shutil.copy2(root / name, out / name)
 shutil.copytree(root / "assets", out / "assets", dirs_exist_ok=True)
