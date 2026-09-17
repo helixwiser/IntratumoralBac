@@ -12,7 +12,7 @@ import shutil
 import yaml
 
 root = Path(__file__).resolve().parent
-project = root.parent / "IntratumoralBac"
+project = root.parent
 cards_root = project / "01-文献卡片"
 metric_source = project / "02-更新指标" / "journal_impact_factors_2025.json"
 date_source = project / "02-更新指标" / "publication_dates_crossref.json"
