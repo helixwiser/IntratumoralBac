@@ -12,7 +12,7 @@ import shutil
 import yaml
 
 root = Path(__file__).resolve().parent
-project = root.parent.parent
+project = root.parent / "IntratumoralBac"
 cards_root = project / "01-文献卡片"
 metric_source = project / "02-更新指标" / "journal_impact_factors_2025.json"
 date_source = project / "02-更新指标" / "publication_dates_crossref.json"
@@ -263,7 +263,7 @@ manifest = {
 (root / "landmark-config.js").write_text("window.LANDMARK_CONFIG=" + json.dumps(landmark_config, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8")
 (root / "data-manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 (root / "assets").mkdir(exist_ok=True)
-shutil.copy2(root.parent / "素材库" / "人体器官导航_乳腺投影_v4.png", root / "assets" / "organ-map.png")
+shutil.copy2(project / "03-网站建设" / "素材库" / "人体器官导航_乳腺投影_v4.png", root / "assets" / "organ-map.png")
 
 out = root / "dist"
 out.mkdir(exist_ok=True)

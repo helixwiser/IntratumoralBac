@@ -1,5 +1,7 @@
 # IntratumoralBac
 
+This is the **website repository**. Open this folder as a separate Codex project. Literature cards, search strategies, metrics, and Obsidian notes remain in the sibling `IntratumoralBac` folder; they are not part of this GitHub repository.
+
 IntratumoralBac is an interactive research atlas for exploring the intratumoral microbiome literature across organs, publication time, citations, journals, named taxa, and abstract-level research patterns.
 
 ## Website
@@ -21,6 +23,8 @@ The current release is a literature snapshot rather than a completed systematic 
 ## Local use
 
 Open `index.html` in a browser. The site is static and has no runtime dependencies.
+
+To rebuild `data.js` and the Sites `dist/` output from the literature project, keep both folders side by side, install `requirements.txt` in a Python environment, and run `python build.py` here. The build reads cards, metrics, organ configuration, and approved abstracts from `../IntratumoralBac`. For GitHub Pages, `node scripts/stage-pages.mjs` stages the current website snapshot into `_site/`.
 
 To validate the Abstract Explorer search behavior:
 
