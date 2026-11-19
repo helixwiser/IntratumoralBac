@@ -4,7 +4,7 @@ const $=selector=>document.querySelector(selector);
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const citations=paper=>Number.isFinite(paper.citations)?paper.citations.toLocaleString('en-US'):'—';
 const jifLabel=paper=>Number.isFinite(paper.jif)?paper.jif.toFixed(1):'Unavailable';
-const statusBadge=paper=>paper.publicationStatus==='retracted'?'<span class="status-badge retracted">RETRACTED</span>':paper.publicationVersion==='preprint'?'<span class="status-badge">PREPRINT</span>':'';
+const statusBadge=paper=>paper.publicationStatus==='retracted'?'<span class="status-badge retracted">RETRACTED</span>':paper.integrityStatus==='corrected'?'<span class="status-badge">CORRECTED</span>':paper.publicationVersion==='preprint'?'<span class="status-badge">PREPRINT</span>':'';
 const publicationDateParts=paper=>String(paper.publishedOn||paper.publishedOnline||paper.year||'').match(/^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?$/);
 const publicationSortTimestamp=paper=>{
   const match=publicationDateParts(paper),year=Number(paper.year);

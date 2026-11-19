@@ -14,17 +14,17 @@ const assert=require('node:assert/strict');
       organs:w.topOrgans,organCount:w.topOrganCount,statuses:w.topFive.map(p=>p.status),
       links:[...document.querySelectorAll('#recent .weekly-papers h4 a')].map(a=>a.href)};
   });
-  assert.equal(result.total,41);assert.equal(result.unique,41);assert.equal(result.sum,41);
-  assert.equal(await page.locator('.weekly-state').innerText(),'2026 SEP WEEK3');
+  assert.equal(result.total,71);assert.equal(result.unique,71);assert.equal(result.sum,71);
+  assert.equal(await page.locator('.weekly-state').innerText(),'2026 NOV WEEK3');
   assert.equal(result.top.length,5);assert.deepEqual(result.top,[...result.top].sort((a,b)=>b-a));
-  assert.deepEqual(result.organs,['Colorectal']);assert.equal(result.organCount,14);
-  assert(result.statuses.includes('Online')&&result.statuses.includes('Published'));
+  assert.deepEqual(result.organs,['Stomach']);assert.equal(result.organCount,17);
+  assert(result.statuses.every(status=>['Online','Published'].includes(status)));
   assert(result.links.every(link=>link.startsWith('https://doi.org/')));
   const display = await page.evaluate(()=>{
     const w=window.WEEKLY_UPDATES.weeks[0];
     const ids=selector=>[...document.querySelectorAll(selector)].map(el=>el.dataset.paperId);
     const online=document.querySelector('.weekly-highlights .online');
-    const published=document.querySelector('.weekly-highlights .published');
+    const published=document.querySelector('#weekly-list .published');
     return {highlights:ids('.weekly-highlights li'),expected:w.topFive.map(p=>p.id),
       recent:ids('#recent li'),chronological:[...w.papers].sort((a,b)=>b.onlineDate.localeCompare(a.onlineDate)||a.id.localeCompare(b.id)).slice(0,5).map(p=>p.id),
       fonts:[...document.querySelectorAll('.weekly-highlights h4,#recent h4')].map(el=>getComputedStyle(el).font),

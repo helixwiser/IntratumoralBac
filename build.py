@@ -214,6 +214,8 @@ for path in sorted(cards_root.rglob("*.md")):
         "scopeClass": str(metadata.get("scope_class") or ""),
         "publicationVersion": str(metadata.get("publication_version") or ""),
         "publicationStatus": str(metadata.get("publication_status") or ""),
+        "integrityStatus": str(metadata.get("integrity_status") or "unknown"),
+        "correctionNotices": metadata.get("correction_notices") or [],
         "publicationStage": str(metadata.get("publication_stage") or ""),
         "retractionDoi": str(metadata.get("retraction_doi") or ""),
         "reviewStatus": str(metadata.get("review_status") or ""),

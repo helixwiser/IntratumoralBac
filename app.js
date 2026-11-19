@@ -39,7 +39,7 @@ const button=(paper,context='collection')=>'<button class="paper-open" data-id="
 const attentionScore=paper=>Number.isFinite(paper.altmetricScore)?paper.altmetricScore:null;
 const attentionLabel=paper=>attentionScore(paper)!==null?Math.ceil(attentionScore(paper)).toLocaleString('en-US'):'—';
 const metricCell=(value,label)=>'<span class="citation-count"><b>'+value+'</b><span>'+label+'</span></span>';
-const statusBadge=paper=>paper.publicationStatus==='retracted'?'<span class="status-badge retracted">RETRACTED</span>':paper.publicationVersion==='preprint'?'<span class="status-badge">PREPRINT</span>':'';
+const statusBadge=paper=>paper.publicationStatus==='retracted'?'<span class="status-badge retracted">RETRACTED</span>':paper.integrityStatus==='corrected'?'<span class="status-badge">CORRECTED</span>':paper.publicationVersion==='preprint'?'<span class="status-badge">PREPRINT</span>':'';
 const taxonLabel=taxon=>String(taxon||'').replaceAll('_',' ').replace(/\s+/g,' ').trim();
 const taxonRanks=taxon=>{
   const label=taxonLabel(taxon);
